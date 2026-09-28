@@ -127,7 +127,6 @@
   .arena h3 { font-family: var(--display); font-weight: 500; font-size: 11px; letter-spacing: .28em; color: var(--cyan); margin: 0; text-shadow: 0 0 8px rgba(40,224,255,.7); }
   .ring { width: 44%; aspect-ratio: 1; border-radius: 50%; border: 2px solid var(--cyan); box-shadow: 0 0 18px rgba(40,224,255,.5), inset 0 0 12px rgba(40,224,255,.3); display: grid; place-items: center; text-align: center; font-size: 10px; color: var(--ink-dim); padding: 8px; }
   .arena p { margin: 0; font-size: 11px; align-self: stretch; }
-  .port { align-self: stretch; font-size: 10px; }
 
   /* jauge de Surcharge verticale 0/3/6/10 */
   .gauge { width: 30px; border: 1px solid var(--line); border-radius: 15px; background: var(--panel); display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 8px 0; font-family: var(--display); font-size: 9px; color: var(--ink-dim); position: relative; }
@@ -176,7 +175,7 @@
   .mon i { width: 42px; height: 42px; border-radius: 50%; border: 1.5px dashed #3a3a60; display: block; }
   .mon.on { border-color: var(--pink); box-shadow: 0 0 14px rgba(255,61,154,.35); }
   .mon.on i { border: 2px solid var(--pink); background: rgba(255,61,154,.12); }
-  .chips { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
   .chip { border: 1px solid var(--line); border-radius: 8px; text-align: center; padding: 7px 0; font-family: var(--display); font-weight: 700; font-size: 12px; background: var(--panel); }
   .chip.on { background: var(--cyan); color: var(--night); border-color: var(--cyan); }
   .label { font-family: var(--display); font-size: 9px; letter-spacing: .14em; color: var(--ink-dim); text-transform: uppercase; }
@@ -229,13 +228,13 @@
     <div>
       <div class="eyebrow">Thème 1 · Cyberpunk synthwave, nuit sous la pluie</div>
       <h1 class="glitch">Néon Kaiju</h1>
-      <p class="lede">Des monstres bio-mécaniques se disputent une mégapole saturée de néons. Dés en verre lumineux, effets de glitch à chaque dégât, bande-son synthwave. <strong>Disposition A · portrait « arène centrale »</strong> : tout est visible d'un coup, lisible pour débuter et pour les parties contre l'IA.</p>
+      <p class="lede">Des monstres bio-mécaniques se disputent une mégapole saturée de néons. Dés en verre lumineux, effets de glitch à chaque dégât, bande-son synthwave. <strong>Disposition A · portrait « arène centrale »</strong> : tout est visible d'un coup, lisible pour débuter. <strong>Mode unique</strong> : 1 joueur humain face à 3 monstres pilotés par l'IA.</p>
     </div>
     <div class="spec">
       <div>
         <h2>Vocabulaire</h2>
         <table class="vocab">
-          <tr><td>Tokyo City / Bay</td><td>La Tour centrale / Le Port</td></tr>
+          <tr><td>Tokyo City</td><td>La Tour centrale</td></tr>
           <tr><td>Énergie</td><td>Cellules</td></tr>
           <tr><td>Méchanceté</td><td>Surcharge</td></tr>
           <tr><td>Cartes Énergie</td><td>Marché noir</td></tr>
@@ -274,9 +273,8 @@
         <div class="ph" style="flex:1.3">[Illustration : Voltrax perché sur une antenne, pluie de néons sur la mégapole]</div>
         <div class="logo"><span>LA GUERRE DES</span><b class="glitch">NÉON KAIJU</b></div>
         <div class="spacer"></div>
-        <div class="btn pink">Partie rapide (vs IA)</div>
-        <div class="btn">Même téléphone (2 à 6)</div>
-        <div class="btn">En ligne</div>
+        <div class="btn pink">Jouer</div>
+        <p class="dim" style="margin:0;font-size:11px;text-align:center">Vous contre 3 monstres IA</p>
         <div class="row">
           <div class="btn ghost">Règles</div>
           <div class="btn ghost">Monstres</div>
@@ -291,7 +289,7 @@
       <div class="phone">
         <div class="topbar">
           <div class="sq">‹</div>
-          <div class="who"><b style="color:var(--ink);text-shadow:none">CHOISIS TON KAIJU</b><span>Joueur 1 / 4</span></div>
+          <div class="who"><b style="color:var(--ink);text-shadow:none">CHOISIS TON KAIJU</b><span>Vous + 3 IA</span></div>
           <div class="sq">?</div>
         </div>
         <div class="mgrid">
@@ -306,11 +304,11 @@
           <b style="font-family:var(--display);font-size:13px" class="pk">VOLTRAX</b>
           <p style="margin:4px 0 0;font-size:12px">Un reptile blindé qui se recharge sur les lignes à haute tension. Adore tenir la Tour centrale.</p>
         </div>
-        <div class="label">Nombre de joueurs</div>
+        <div class="label">Vos adversaires (IA)</div>
         <div class="chips">
-          <div class="chip">2</div><div class="chip">3</div><div class="chip on">4</div><div class="chip">5</div><div class="chip">6</div>
+          <div class="chip">IA 1</div><div class="chip">IA 2</div><div class="chip">IA 3</div>
         </div>
-        <p class="dim" style="margin:0;font-size:11px">De 2 à 4 joueurs, seule la Tour centrale est utilisée. Le Port s'ouvre à 5-6 joueurs.</p>
+        <p class="dim" style="margin:0;font-size:11px">Les 3 monstres IA sont tirés au hasard parmi ceux que vous n'avez pas choisis.</p>
         <div class="spacer"></div>
         <div class="btn pink">Entrer dans la ville</div>
       </div>
@@ -325,17 +323,15 @@
           <div class="sq">?</div>
         </div>
         <div class="opps">
-          <div class="card opp"><b>Mecha-Lynx</b><span class="num">♥ 5 · ★ 14</span></div>
-          <div class="card opp"><b>Hydrokor</b><span class="num">♥ 9 · ★ 8</span></div>
-          <div class="card opp"><b>Spectra</b><span class="num">♥ 3 · ★ 11</span></div>
+          <div class="card opp"><b>Mecha-Lynx</b><span class="num">IA · ♥ 5 · ★ 14</span></div>
+          <div class="card opp"><b>Hydrokor</b><span class="num">IA · ♥ 9 · ★ 8</span></div>
+          <div class="card opp"><b>Spectra</b><span class="num">IA · ♥ 3 · ★ 11</span></div>
         </div>
         <div class="arena-row">
           <div class="arena">
             <h3>LA TOUR CENTRALE</h3>
             <div class="ring">[Illustration Mecha-Lynx]</div>
-            <p>Occupée par <b class="cy">Mecha-Lynx</b> · +2 ★ au début de son tour</p>
-            <div class="ph port">Le Port · actif à 5-6 joueurs</div>
-          </div>
+            <p>Occupée par <b class="cy">Mecha-Lynx</b> · +2 ★ au début de son tour</p>          </div>
           <div class="gauge" aria-label="Surcharge 4 sur 10">
             <span>10</span><span>6</span><span class="now">4</span><span>3</span><span>0</span>
           </div>
@@ -424,7 +420,7 @@
             <div class="btn pink">Rester</div>
           </div>
           <div class="timer"><i></i></div>
-          <p class="dim" style="font-size:10px;text-align:center">Décision automatique dans 6 s (IA : rester)</p>
+          <p class="dim" style="font-size:10px;text-align:center">Sans réponse dans 6 s, vous restez</p>
         </div>
       </div>
       <figcaption><b>05</b> Décision Fuir / Rester</figcaption>
@@ -459,7 +455,7 @@
         </div>
         <div class="card offer" style="grid-template-columns:48px 1fr">
           <div class="ph" style="min-height:52px">[fx]</div>
-          <div><div class="t"><b>Arc électrique</b></div><p style="margin-top:4px">Vos griffes touchent aussi Le Port.</p></div>
+          <div><div class="t"><b>Arc électrique</b></div><p style="margin-top:4px">Chaque dé Éclair rapporte 1 cellule de plus.</p></div>
         </div>
         <div class="spacer"></div>
         <div class="btn pink">Activer</div>
