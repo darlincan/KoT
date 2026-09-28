@@ -213,6 +213,32 @@
   .kpis .card { padding: 8px 4px; text-align: center; font-size: 10px; color: var(--ink-dim); }
   .kpis b { display: block; font-family: var(--display); font-size: 17px; color: var(--ink); }
   .spacer { flex: 1; }
+
+  /* ---------- Mode paysage (18,5:9) ---------- */
+  .land-board { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(600px, 100%), 1fr)); gap: 40px 28px; justify-items: center; }
+  .land-board figure { max-width: 600px; }
+  /* sur écran étroit, la maquette garde sa taille réelle et défile dans son cadre */
+  .scroller { overflow-x: auto; padding: 0 12px 12px 6px; margin: 0 -12px -12px -6px; }
+  .phone.land {
+    width: 600px; max-width: none; aspect-ratio: 18.5 / 9; flex-direction: row; gap: 12px; padding: 12px;
+  }
+  .land .col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .land .grow { flex: 1; }
+  .land .opps { grid-template-columns: 1fr; gap: 5px; }
+  .land .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; }
+  .land .dice { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .land .arena { gap: 8px; padding: 10px; }
+  .land .ring { width: auto; height: 46%; }
+  .land .arena p { text-align: center; }
+  .land .offer { grid-template-columns: 1fr; gap: 4px; align-content: start; }
+  .land .offer .ph { min-height: 44px; height: auto; }
+  .land .rank { gap: 4px; }
+  .land .rank .card { padding: 6px 10px; font-size: 12px; }
+  .land .dimmed { flex-direction: row; padding: 12px; gap: 12px; }
+  .land .modal { inset: 16px 36px; display: grid; grid-template-columns: 1fr 1.25fr; gap: 14px; }
+  .land .modal h3 { font-size: 20px; }
+  .land .btn { letter-spacing: .06em; padding-inline: 6px; }
+  .land .row > * { min-width: 0; }
 </style>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -261,7 +287,7 @@
   </header>
 
   <section class="flow-title">
-    <h2>PARCOURS DE JEU</h2>
+    <h2>PARCOURS DE JEU · PORTRAIT</h2>
     <p>7 écrans · portrait Android 9:18,5 · rose = action / sélection, cyan = zone &amp; Cellules</p>
   </section>
 
@@ -484,6 +510,259 @@
         <div class="btn ghost">Retour à l'accueil</div>
       </div>
       <figcaption><b>07</b> Fin de partie</figcaption>
+    </figure>
+
+  </div>
+
+  <section class="flow-title">
+    <h2>PARCOURS DE JEU · PAYSAGE</h2>
+    <p>7 écrans · paysage Android 18,5:9 · mêmes écrans, réorganisés en colonnes</p>
+  </section>
+
+  <div class="land-board">
+
+    <!-- 1L · Accueil -->
+    <figure>
+      <div class="scroller"><div class="phone land">
+        <div class="ph" style="flex:1.2">[Illustration : Voltrax perché sur une antenne, pluie de néons sur la mégapole]</div>
+        <div class="col grow">
+          <div class="spacer"></div>
+          <div class="logo"><span>LA GUERRE DES</span><b class="glitch">NÉON KAIJU</b></div>
+          <div class="spacer"></div>
+          <div class="btn pink">Jouer</div>
+          <p class="dim" style="margin:0;font-size:11px;text-align:center">Vous contre 3 monstres IA</p>
+          <div class="row">
+            <div class="btn ghost">Règles</div>
+            <div class="btn ghost">Monstres</div>
+            <div class="btn ghost">Réglages</div>
+          </div>
+        </div>
+      </div></div>
+      <figcaption><b>01</b> Accueil · paysage</figcaption>
+    </figure>
+
+    <!-- 2L · Choix du monstre -->
+    <figure>
+      <div class="scroller"><div class="phone land">
+        <div class="col grow">
+          <div class="topbar">
+            <div class="sq">‹</div>
+            <div class="who"><b style="color:var(--ink);text-shadow:none">CHOISIS TON KAIJU</b><span>Vous + 3 IA</span></div>
+          </div>
+          <div class="mgrid">
+            <div class="card mon on"><i></i>Voltrax</div>
+            <div class="card mon"><i></i>Mecha-Lynx</div>
+            <div class="card mon"><i></i>Hydrokor</div>
+            <div class="card mon"><i></i>Spectra</div>
+            <div class="card mon"><i></i>Ferrodon</div>
+            <div class="card mon"><i></i>Kilowatt</div>
+          </div>
+        </div>
+        <div class="col" style="width:220px">
+          <div class="card" style="padding:10px 12px">
+            <b style="font-family:var(--display);font-size:13px" class="pk">VOLTRAX</b>
+            <p style="margin:4px 0 0;font-size:12px">Un reptile blindé qui se recharge sur les lignes à haute tension. Adore tenir la Tour centrale.</p>
+          </div>
+          <div class="label">Vos adversaires (IA)</div>
+          <div class="chips">
+            <div class="chip">IA 1</div><div class="chip">IA 2</div><div class="chip">IA 3</div>
+          </div>
+          <p class="dim" style="margin:0;font-size:11px">Tirés au hasard parmi les monstres restants.</p>
+          <div class="spacer"></div>
+          <div class="btn pink">Entrer dans la ville</div>
+        </div>
+      </div></div>
+      <figcaption><b>02</b> Choix du monstre · paysage</figcaption>
+    </figure>
+
+    <!-- 3L · Écran de jeu -->
+    <figure>
+      <div class="scroller"><div class="phone land">
+        <div class="col" style="width:140px">
+          <div class="topbar">
+            <div class="sq">≡</div>
+            <div class="who" style="text-align:left"><b>VOLTRAX</b><span>Lancer 2 / 3</span></div>
+          </div>
+          <div class="opps">
+            <div class="card opp"><b>Mecha-Lynx</b><span class="num">IA · ♥ 5 · ★ 14</span></div>
+            <div class="card opp"><b>Hydrokor</b><span class="num">IA · ♥ 9 · ★ 8</span></div>
+            <div class="card opp"><b>Spectra</b><span class="num">IA · ♥ 3 · ★ 11</span></div>
+          </div>
+          <div class="spacer"></div>
+          <div class="card stats num">
+            <span>♥ 7/10</span><span>★ 12/20</span><span class="cy"><svg class="ico fill"><use href="#bolt"/></svg> 5</span><span class="dim">2 cartes</span>
+          </div>
+        </div>
+        <div class="arena-row">
+          <div class="arena">
+            <h3>LA TOUR CENTRALE</h3>
+            <div class="ring">[Illustration Mecha-Lynx]</div>
+            <p>Occupée par <b class="cy">Mecha-Lynx</b> · +2 ★ au début de son tour</p>
+          </div>
+          <div class="gauge" aria-label="Surcharge 4 sur 10">
+            <span>10</span><span>6</span><span class="now">4</span><span>3</span><span>0</span>
+          </div>
+        </div>
+        <div class="col" style="width:180px">
+          <div class="spacer"></div>
+          <div class="dice">
+            <div class="die kept">3</div>
+            <div class="die kept">3</div>
+            <div class="die"><svg class="ico"><use href="#claw"/></svg></div>
+            <div class="die"><svg class="ico"><use href="#heart"/></svg></div>
+            <div class="die"><svg class="ico"><use href="#bolt"/></svg></div>
+            <div class="die">2</div>
+          </div>
+          <p class="hint">Touchez un dé pour le verrouiller</p>
+          <div class="spacer"></div>
+          <div class="btn">Relancer</div>
+          <div class="btn pink">Résoudre</div>
+        </div>
+      </div></div>
+      <figcaption><b>03</b> Écran de jeu · paysage (dés sous le pouce droit)</figcaption>
+    </figure>
+
+    <!-- 4L · Marché noir -->
+    <figure>
+      <div class="scroller"><div class="phone land" style="flex-direction:column;gap:8px">
+        <div class="shop-head">
+          <h3>MARCHÉ NOIR</h3>
+          <span class="dim" style="font-size:11px;flex:1">Chaque carte achetée est remplacée.</span>
+          <span class="pill num"><svg class="ico fill"><use href="#bolt"/></svg> 8 cellules</span>
+        </div>
+        <div class="row" style="flex:1;min-height:0">
+          <div class="card offer">
+            <div class="ph">[visuel]</div>
+            <div class="t"><b>Blindage réactif</b><span>4<svg class="ico fill" style="width:10px"><use href="#bolt"/></svg></span></div>
+            <div><span class="tag pow">POUVOIR</span></div>
+            <p>Le premier dégât que vous subissez à chaque tour est ignoré.</p>
+            <div class="btn pink">Acheter</div>
+          </div>
+          <div class="card offer">
+            <div class="ph">[visuel]</div>
+            <div class="t"><b>Surtension</b><span>3<svg class="ico fill" style="width:10px"><use href="#bolt"/></svg></span></div>
+            <div><span class="tag act">ACTION</span></div>
+            <p>Gagnez 2 ★ et 1 point de Surcharge.</p>
+            <div class="btn pink">Acheter</div>
+          </div>
+          <div class="card offer">
+            <div class="ph">[visuel]</div>
+            <div class="t"><b>Essaim de drones</b><span>5<svg class="ico fill" style="width:10px"><use href="#bolt"/></svg></span></div>
+            <div><span class="tag pow">POUVOIR</span></div>
+            <p>Vos griffes infligent +1 dégât aux monstres de la Tour.</p>
+            <div class="btn pink">Acheter</div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="btn cyan">Renouveler · 2 cellules</div>
+          <div class="btn light">Terminer mon tour</div>
+        </div>
+      </div></div>
+      <figcaption><b>04</b> Boutique · Marché noir · paysage</figcaption>
+    </figure>
+
+    <!-- 5L · Décision Fuir / Rester -->
+    <figure>
+      <div class="scroller"><div class="phone land">
+        <div class="dimmed" aria-hidden="true">
+          <div class="col" style="width:140px"><div class="card opp"><b>Voltrax</b></div><div class="card opp"><b>Hydrokor</b></div><div class="card opp"><b>Spectra</b></div></div>
+          <div class="arena" style="flex:1"><h3>LA TOUR CENTRALE</h3><div class="ring" style="height:40%"></div></div>
+          <div class="col" style="width:180px"><div class="dice"><div class="die"></div><div class="die"></div><div class="die"></div></div></div>
+        </div>
+        <div class="modal">
+          <div class="col">
+            <span class="alert">ALERTE · LA TOUR CENTRALE</span>
+            <h3 class="glitch">SIGNAL<br>CRITIQUE !</h3>
+            <p><b class="pk">Spectra</b> vous inflige <b>3 dégâts</b>. Il vous reste <b class="num">4 ♥</b>.</p>
+            <div class="ph" style="flex:1">[Glitch : Voltrax vacille au sommet de la Tour]</div>
+          </div>
+          <div class="col">
+            <div class="choice">
+              <div class="card"><b>FUIR</b>Spectra prend la Tour (+1 ★ pour elle). Vous pourrez de nouveau vous soigner.</div>
+              <div class="card" style="border-color:var(--pink)"><b class="pk">RESTER</b>+2 ★ au début de votre tour, mais aucun soin par les dés.</div>
+            </div>
+            <div class="spacer"></div>
+            <div class="row">
+              <div class="btn">Fuir</div>
+              <div class="btn pink">Rester</div>
+            </div>
+            <div class="timer"><i></i></div>
+            <p class="dim" style="font-size:10px;text-align:center">Sans réponse dans 6 s, vous restez</p>
+          </div>
+        </div>
+      </div></div>
+      <figcaption><b>05</b> Décision Fuir / Rester · paysage</figcaption>
+    </figure>
+
+    <!-- 6L · Palier de Surcharge -->
+    <figure>
+      <div class="scroller"><div class="phone land">
+        <div class="col grow">
+          <div class="topbar">
+            <div class="sq">≡</div>
+            <div class="who" style="text-align:left"><b>VOLTRAX</b><span>Résolution</span></div>
+          </div>
+          <div class="spacer"></div>
+          <div style="text-align:center">
+            <div class="label" style="color:var(--cyan)">Palier atteint</div>
+            <div class="glitch" style="font-family:var(--display);font-weight:900;font-size:26px;margin-top:4px;text-shadow:0 0 16px rgba(255,61,154,.8)">SURCHARGE 6</div>
+          </div>
+          <div>
+            <div class="hbar"><i></i></div>
+            <div class="hbar-scale num"><span>0</span><span>3</span><span>6</span><span>10</span></div>
+          </div>
+          <div class="tiers">
+            <div class="card tier"><b>3</b>+1 dégât de griffe</div>
+            <div class="card tier on"><b>6</b>Débloque un pouvoir</div>
+            <div class="card tier"><b>10</b>Forme ultime</div>
+          </div>
+          <div class="spacer"></div>
+        </div>
+        <div class="col" style="width:240px">
+          <div class="label">Choisissez un pouvoir</div>
+          <div class="card offer" style="grid-template-columns:44px 1fr;border-color:var(--pink)">
+            <div class="ph" style="min-height:48px">[fx]</div>
+            <div><div class="t"><b>Court-circuit</b></div><p style="margin-top:4px">Une fois par tour, relancez un dé adverse.</p></div>
+          </div>
+          <div class="card offer" style="grid-template-columns:44px 1fr">
+            <div class="ph" style="min-height:48px">[fx]</div>
+            <div><div class="t"><b>Arc électrique</b></div><p style="margin-top:4px">Chaque dé Éclair rapporte 1 cellule de plus.</p></div>
+          </div>
+          <div class="spacer"></div>
+          <div class="btn pink">Activer</div>
+        </div>
+      </div></div>
+      <figcaption><b>06</b> Palier de Surcharge · paysage</figcaption>
+    </figure>
+
+    <!-- 7L · Fin de partie -->
+    <figure>
+      <div class="scroller"><div class="phone land">
+        <div class="col grow">
+          <div class="label" style="text-align:center;color:var(--cyan);letter-spacing:.3em">VICTOIRE PAR 20 ★</div>
+          <div class="ph" style="flex:1;border-color:var(--cyan);border-style:solid;box-shadow:0 0 16px rgba(40,224,255,.3)">[Voltrax couronné au sommet de la Tour centrale]</div>
+          <div style="font-family:var(--display);font-weight:900;font-size:18px;line-height:1.1;text-align:center;text-wrap:balance">Voltrax règne sur la mégapole</div>
+        </div>
+        <div class="col" style="width:250px">
+          <div class="rank num">
+            <div class="card win"><em>1</em><span>Voltrax (vous)</span><span>20 ★</span></div>
+            <div class="card"><em>2</em><span>Mecha-Lynx</span><span>16 ★</span></div>
+            <div class="card"><em>3</em><span>Hydrokor</span><span>9 ★</span></div>
+            <div class="card"><em>–</em><span>Spectra</span><span class="dim">détruite</span></div>
+          </div>
+          <div class="kpis num">
+            <div class="card"><b>14</b>dégâts infligés</div>
+            <div class="card"><b>5</b>tours à la Tour</div>
+            <div class="card"><b>4</b>cartes achetées</div>
+          </div>
+          <div class="spacer"></div>
+          <div class="row">
+            <div class="btn ghost">Accueil</div>
+            <div class="btn pink">Rejouer</div>
+          </div>
+        </div>
+      </div></div>
+      <figcaption><b>07</b> Fin de partie · paysage</figcaption>
     </figure>
 
   </div>
