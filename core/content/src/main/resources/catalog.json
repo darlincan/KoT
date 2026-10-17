@@ -1,0 +1,257 @@
+{
+  "cards": [
+    {
+      "id": "blindage_reactif",
+      "nom": "Blindage réactif",
+      "cout": 4,
+      "type": "POUVOIR",
+      "texte": "Le premier dégât que vous subissez à chaque tour est ignoré.",
+      "effets": [{ "declencheur": "AVANT_DEGAT_SUBI", "condition": "degatsSubisCeTour == 0", "cible": "SOI", "operation": "annulerDegat", "valeur": 1 }]
+    },
+    {
+      "id": "griffes_plasma",
+      "nom": "Griffes à plasma",
+      "cout": 5,
+      "type": "POUVOIR",
+      "texte": "Infligez 1 dégât supplémentaire lorsque vous blessez un monstre.",
+      "effets": [{ "declencheur": "APRES_DEGAT_INFLIGE", "cible": "AUTRES", "operation": "dealDamage", "valeur": 1 }]
+    },
+    {
+      "id": "coeur_nucleaire",
+      "nom": "Cœur nucléaire",
+      "cout": 3,
+      "type": "POUVOIR",
+      "texte": "Gagnez 1 Cellule au début de votre tour.",
+      "effets": [{ "declencheur": "DEBUT_TOUR", "cible": "SOI", "operation": "gainEnergy", "valeur": 1 }]
+    },
+    {
+      "id": "marche_clandestin",
+      "nom": "Contact clandestin",
+      "cout": 3,
+      "type": "POUVOIR",
+      "texte": "Les cartes du Marché noir vous coûtent 1 Cellule de moins.",
+      "effets": [{ "declencheur": "PERMANENT", "cible": "SOI", "operation": "modifyCost", "valeur": -1 }]
+    },
+    {
+      "id": "recalibrage_optique",
+      "nom": "Recalibrage optique",
+      "cout": 4,
+      "type": "POUVOIR",
+      "texte": "Gagnez 1 relance supplémentaire à chaque tour.",
+      "effets": [{ "declencheur": "AVANT_LANCER", "cible": "SOI", "operation": "rerollDice", "valeur": 1 }]
+    },
+    {
+      "id": "piratage_neural",
+      "nom": "Piratage neural",
+      "cout": 4,
+      "type": "POUVOIR",
+      "texte": "Après résolution, gagnez 1 ★ si vous êtes dans la Tour centrale.",
+      "effets": [{ "declencheur": "APRES_RESOLUTION", "condition": "estDansTokyo == true", "cible": "SOI", "operation": "gainVp", "valeur": 1 }]
+    },
+    {
+      "id": "bombe_iem",
+      "nom": "Bombe IEM",
+      "cout": 4,
+      "type": "ACTION",
+      "texte": "Infligez 2 dégâts à tous les autres monstres et gagnez 1 ★.",
+      "effets": [
+        { "declencheur": "ACHAT", "cible": "AUTRES", "operation": "dealDamage", "valeur": 2 },
+        { "declencheur": "ACHAT", "cible": "SOI", "operation": "gainVp", "valeur": 1 }
+      ]
+    },
+    {
+      "id": "surcharge_reseau",
+      "nom": "Surcharge réseau",
+      "cout": 3,
+      "type": "ACTION",
+      "texte": "Gagnez immédiatement 5 Cellules.",
+      "effets": [{ "declencheur": "ACHAT", "cible": "SOI", "operation": "gainEnergy", "valeur": 5 }]
+    },
+    {
+      "id": "nanobots_reparateurs",
+      "nom": "Nanobots réparateurs",
+      "cout": 3,
+      "type": "ACTION",
+      "texte": "Récupérez 3 ♥ (même dans la Tour centrale).",
+      "effets": [{ "declencheur": "ACHAT", "cible": "SOI", "operation": "gainHp", "valeur": 3 }]
+    },
+    {
+      "id": "frappe_orbitale",
+      "nom": "Frappe orbitale",
+      "cout": 6,
+      "type": "ACTION",
+      "texte": "Gagnez 2 ★ et infligez 3 dégâts à l'occupant de la Tour.",
+      "effets": [
+        { "declencheur": "ACHAT", "cible": "SOI", "operation": "gainVp", "valeur": 2 },
+        { "declencheur": "ACHAT", "cible": "OCCUPANT", "operation": "dealDamage", "valeur": 3 }
+      ]
+    },
+    {
+      "id": "drones_sentinelles",
+      "nom": "Drones sentinelles",
+      "cout": 4,
+      "type": "POUVOIR",
+      "texte": "Gagnez 1 ★ supplémentaire quand vous entrez dans la Tour.",
+      "effets": [{ "declencheur": "ENTREE_TOKYO", "cible": "SOI", "operation": "gainVp", "valeur": 1 }]
+    },
+    {
+      "id": "exosquelette_titane",
+      "nom": "Exosquelette titane",
+      "cout": 5,
+      "type": "POUVOIR",
+      "texte": "Réduit de 1 tous les dégâts subis si vous êtes hors de la Tour.",
+      "effets": [{ "declencheur": "AVANT_DEGAT_SUBI", "condition": "estDansTokyo == false", "cible": "SOI", "operation": "annulerDegat", "valeur": 1 }]
+    },
+    {
+      "id": "condensateur_flux",
+      "nom": "Condensateur de flux",
+      "cout": 3,
+      "type": "POUVOIR",
+      "texte": "En fin de tour, gagnez 1 Cellule s'il vous reste 0 Cellule.",
+      "effets": [{ "declencheur": "FIN_TOUR", "condition": "energie == 0", "cible": "SOI", "operation": "gainEnergy", "valeur": 1 }]
+    },
+    {
+      "id": "decharge_voisinage",
+      "nom": "Décharge de proximité",
+      "cout": 4,
+      "type": "ACTION",
+      "texte": "Infligez 2 dégâts à vos deux voisins.",
+      "effets": [{ "declencheur": "ACHAT", "cible": "VOISINS", "operation": "dealDamage", "valeur": 2 }]
+    },
+    {
+      "id": "implant_cybernetique",
+      "nom": "Implant cybernétique",
+      "cout": 4,
+      "type": "POUVOIR",
+      "texte": "Change un dé 1 en griffe lors de la résolution.",
+      "effets": [{ "declencheur": "APRES_RESOLUTION", "cible": "SOI", "operation": "changerFace", "valeur": 1 }]
+    },
+    {
+      "id": "balise_neon",
+      "nom": "Balise Néon",
+      "cout": 3,
+      "type": "POUVOIR",
+      "texte": "Gagnez 1 ★ en fin de tour si vous avez au moins 8 ♥.",
+      "effets": [{ "declencheur": "FIN_TOUR", "condition": "hp >= 8", "cible": "SOI", "operation": "gainVp", "valeur": 1 }]
+    },
+    {
+      "id": "protocole_berserk",
+      "nom": "Protocole Berserk",
+      "cout": 5,
+      "type": "POUVOIR",
+      "texte": "Active le mode furie et inflige 1 dégât à tous en entrant dans la Tour.",
+      "effets": [
+        { "declencheur": "ENTREE_TOKYO", "cible": "AUTRES", "operation": "dealDamage", "valeur": 1 },
+        { "declencheur": "ENTREE_TOKYO", "cible": "SOI", "operation": "setFlag", "valeur": 1 }
+      ]
+    },
+    {
+      "id": "extraction_miniere",
+      "nom": "Extraction de données",
+      "cout": 2,
+      "type": "ACTION",
+      "texte": "Gagnez 1 ★ et 1 Cellule.",
+      "effets": [
+        { "declencheur": "ACHAT", "cible": "SOI", "operation": "gainVp", "valeur": 1 },
+        { "declencheur": "ACHAT", "cible": "SOI", "operation": "gainEnergy", "valeur": 1 }
+      ]
+    },
+    {
+      "id": "regenerateur_cellulaire",
+      "nom": "Régénérateur cellulaire",
+      "cout": 4,
+      "type": "POUVOIR",
+      "texte": "Soigne 1 ♥ en fin de tour si vous êtes hors de la Tour.",
+      "effets": [{ "declencheur": "FIN_TOUR", "condition": "estDansTokyo == false", "cible": "SOI", "operation": "gainHp", "valeur": 1 }]
+    },
+    {
+      "id": "canon_railgun",
+      "nom": "Canon Railgun",
+      "cout": 7,
+      "type": "ACTION",
+      "texte": "Gagnez 3 ★ et infligez 2 dégâts à tous les monstres hors de la Tour.",
+      "effets": [
+        { "declencheur": "ACHAT", "cible": "SOI", "operation": "gainVp", "valeur": 3 },
+        { "declencheur": "ACHAT", "cible": "HORS_TOKYO", "operation": "dealDamage", "valeur": 2 }
+      ]
+    }
+  ],
+  "tiles": [
+    {
+      "id": "tile_3_court_circuit",
+      "nom": "Court-circuit",
+      "niveau": 3,
+      "texte": "Gagnez 1 Cellule au début de chaque tour.",
+      "effets": [{ "declencheur": "DEBUT_TOUR", "cible": "SOI", "operation": "gainEnergy", "valeur": 1 }]
+    },
+    {
+      "id": "tile_3_blindage_leger",
+      "nom": "Châssis renforcé",
+      "niveau": 3,
+      "texte": "Soigne 1 ♥ à la fin de votre tour si hors de la Tour.",
+      "effets": [{ "declencheur": "FIN_TOUR", "condition": "estDansTokyo == false", "cible": "SOI", "operation": "gainHp", "valeur": 1 }]
+    },
+    {
+      "id": "tile_3_impulsion",
+      "nom": "Impulsion statique",
+      "niveau": 3,
+      "texte": "Inflige 1 dégât aux autres en entrant dans la Tour.",
+      "effets": [{ "declencheur": "ENTREE_TOKYO", "cible": "AUTRES", "operation": "dealDamage", "valeur": 1 }]
+    },
+    {
+      "id": "tile_3_escompte",
+      "nom": "Accès privilégié",
+      "niveau": 3,
+      "texte": "Les cartes coûtent 1 Cellule de moins.",
+      "effets": [{ "declencheur": "PERMANENT", "cible": "SOI", "operation": "modifyCost", "valeur": -1 }]
+    },
+    {
+      "id": "tile_6_arc_electrique",
+      "nom": "Arc électrique",
+      "niveau": 6,
+      "texte": "Gagnez 1 ★ au début de votre tour.",
+      "effets": [{ "declencheur": "DEBUT_TOUR", "cible": "SOI", "operation": "gainVp", "valeur": 1 }]
+    },
+    {
+      "id": "tile_6_bouclier_deflecteur",
+      "nom": "Bouclier déflecteur",
+      "niveau": 6,
+      "texte": "Annule 1 dégât à chaque attaque subie.",
+      "effets": [{ "declencheur": "AVANT_DEGAT_SUBI", "cible": "SOI", "operation": "annulerDegat", "valeur": 1 }]
+    },
+    {
+      "id": "tile_6_reacteur_fusion",
+      "nom": "Réacteur à fusion",
+      "niveau": 6,
+      "texte": "Gagnez 2 Cellules au début de votre tour.",
+      "effets": [{ "declencheur": "DEBUT_TOUR", "cible": "SOI", "operation": "gainEnergy", "valeur": 2 }]
+    },
+    {
+      "id": "tile_6_predateur_neon",
+      "nom": "Prédateur Néon",
+      "niveau": 6,
+      "texte": "Gagnez 1 ★ supplémentaire en entrant dans la Tour.",
+      "effets": [{ "declencheur": "ENTREE_TOKYO", "cible": "SOI", "operation": "gainVp", "valeur": 1 }]
+    },
+    {
+      "id": "tile_10_apocalypse_cyber",
+      "nom": "Apocalypse Cyber",
+      "niveau": 10,
+      "texte": "Gagnez 2 ★ et infligez 1 dégât aux autres au début de votre tour.",
+      "effets": [
+        { "declencheur": "DEBUT_TOUR", "cible": "SOI", "operation": "gainVp", "valeur": 2 },
+        { "declencheur": "DEBUT_TOUR", "cible": "AUTRES", "operation": "dealDamage", "valeur": 1 }
+      ]
+    },
+    {
+      "id": "tile_10_immortalite_synthetique",
+      "nom": "Immortalité synthétique",
+      "niveau": 10,
+      "texte": "Soigne 2 ♥ et donne 2 ★ à la fin de chaque tour.",
+      "effets": [
+        { "declencheur": "FIN_TOUR", "cible": "SOI", "operation": "gainHp", "valeur": 2 },
+        { "declencheur": "FIN_TOUR", "cible": "SOI", "operation": "gainVp", "valeur": 2 }
+      ]
+    }
+  ]
+}
