@@ -1,3 +1,8 @@
 <resources>
-    <string name="app_name">KingOfTokyo</string>
+    <string name="app_name">Néon Kaiju</string>
+    <string name="zone_tokyo_city">La Tour centrale</string>
+    <string name="resource_energy">Cellules</string>
+    <string name="gauge_malice">Surcharge</string>
+    <string name="shop_name">Marché noir</string>
+    <string name="malice_tiles_name">Pouvoirs de Surcharge</string>
 </resources>
