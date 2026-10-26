@@ -1,0 +1,70 @@
+﻿Répartition des tâches — King of Tokyo Néon Kaiju
+La source: tableau Trello https://trello.com/b/THQ1hP36
+
+Membre;Tâches;Terminées;En cours;À faire
+Darlin Canis KAPATA NGANKAM;13;0;3;10
+Adrien DEU;14;0;8;6
+Vanelle Ivanna TCHOUKA;14;0;7;7
+Ninon Carmene TSAFACK NGUEMEGNE;14;0;7;7
+
+Phase;Tâche;Responsable;Statut;Échéance;Dépend de
+P0 · Cadrage;Squelette Gradle : 6 modules, version catalog, minSdk 29, JDK 21;Toute l'équipe;Terminé;;
+P1 · Wireframes;7 wireframes Néon Kaiju en paysage;Toute l'équipe;Terminé;;
+P2 · Moteur;P2.1 · Types immuables de :core:model;Toute l'équipe;Terminé;;
+P3 · Contenu & effets;P3 · Écrire les 20 cartes et les 10 tuiles (catalog.json);Toute l'équipe;Terminé;;
+P5 · Bots;P5 · Interface BotPolicy;Toute l'équipe;Terminé;;
+Architecture MVVM;MVVM 1 · GameRepository + CatalogRepository (I/O hors thread principal);Darlin Canis KAPATA NGANKAM;À faire (cette semaine);2026-11-01;
+Architecture MVVM;MVVM 2 · GameViewModel : StateFlow<UiState> + onEvent();Darlin Canis KAPATA NGANKAM;À faire (cette semaine);2026-11-01;MVVM 1
+Architecture MVVM;MVVM 3 · Mappers GameState → UiState par écran;Darlin Canis KAPATA NGANKAM;À faire (cette semaine);2026-11-01;MVVM 2
+Architecture MVVM;MVVM 4 · Navigation : route et monstre choisi qui survivent à l'arrêt du processus;Darlin Canis KAPATA NGANKAM;À faire (cette semaine);2026-11-01;MVVM 2
+Architecture MVVM;Nettoyage : activity_main.xml, dépendance material (Views);Darlin Canis KAPATA NGANKAM;À faire;2026-11-08;MVVM 4
+P0 · Cadrage;Branches protégées + modèles d'issue et de PR;Darlin Canis KAPATA NGANKAM;À faire;2026-11-01;
+P0 · Cadrage;Dépôt GitHub et fichier AUTHORS;Darlin Canis KAPATA NGANKAM;En cours;2026-11-01;
+P0 · Cadrage;Hilt : injection des repositories et du générateur aléatoire;Darlin Canis KAPATA NGANKAM;À faire;2026-11-08;MVVM 1
+P6 · Persistance;MVVM 5 · SettingsViewModel + SettingsRepository (DataStore);Darlin Canis KAPATA NGANKAM;À faire;2026-11-08;
+P6 · Persistance;P6 · Reprise après rotation, arrière-plan, fermeture, y compris au milieu d'une décision;Darlin Canis KAPATA NGANKAM;À faire;2026-11-13;MVVM 4
+P6 · Persistance;P6 · Sauvegarde automatique après chaque action;Darlin Canis KAPATA NGANKAM;En cours;2026-11-13;MVVM 1
+P6 · Persistance;P6 · Sérialisation versionnée de GameState (graine comprise);Darlin Canis KAPATA NGANKAM;En cours;2026-11-13;
+P8 · Rendu;P8 · Vérification finale du dépôt;Darlin Canis KAPATA NGANKAM;À faire;2026-11-16;
+P2 · Moteur;Couverture ≥ 85 % des lignes sur :core:engine;Adrien DEU;À faire;2026-11-01;
+P2 · Moteur;P2.2 · Machine à états des 5 phases, legalActions, reduce;Adrien DEU;En cours;2026-11-01;
+P2 · Moteur;P2.3 · Mise en place et phase de lancer;Adrien DEU;En cours;2026-11-01;
+P2 · Moteur;P2.4 · Résolution : ★, Méchanceté et paliers, énergie, griffes, soins;Adrien DEU;En cours;2026-11-01;
+P2 · Moteur;P2.5 · Décision Fuir ou Rester, élimination;Adrien DEU;En cours;2026-11-01;
+P2 · Moteur;P2.6 · Entrée dans Tokyo;Adrien DEU;En cours;2026-11-01;
+P2 · Moteur;P2.7 · Achat, fin de tour, conditions de victoire;Adrien DEU;En cours;2026-11-01;
+P2 · Moteur;P2.8 · Journal de partie et rejeu depuis la graine;Adrien DEU;À faire;2026-11-01;
+P3 · Contenu & effets;P3 · Interpréteur d'effets : 9 opérations, 9 déclencheurs, 7 cibles;Adrien DEU;En cours;2026-11-01;
+P3 · Contenu & effets;P3 · Parseur d'expressions de condition (sans eval);Adrien DEU;En cours;2026-11-01;
+P3 · Contenu & effets;P3 · Schéma JSON des cartes et tuiles validé au build;Adrien DEU;À faire;2026-11-08;
+P3 · Contenu & effets;P3 · Un test par carte et par tuile (30 tests);Adrien DEU;À faire (cette semaine);2026-11-08;
+P8 · Rendu;P8 · README à jour;Adrien DEU;À faire;2026-11-16;
+P8 · Rendu;P8 · Tableur de répartition des tâches;Adrien DEU;À faire;2026-11-16;
+P4 · Interface;P4 · Composant dé : verrouillable (rose + cadenas), animé;Vanelle Ivanna TCHOUKA;En cours;2026-11-08;
+P4 · Interface;P4 · Règles transverses UX (§9);Vanelle Ivanna TCHOUKA;À faire;2026-11-08;
+P4 · Interface;P4 · Thème Compose Néon Kaiju;Vanelle Ivanna TCHOUKA;En cours;2026-11-08;
+P4 · Interface;P4 · Toutes les chaînes dans strings.xml (vocabulaire §2.1);Vanelle Ivanna TCHOUKA;À faire (cette semaine);2026-11-08;
+P4 · Interface;P4 · Verrouiller le paysage (screenOrientation) et retirer GameScreenPortrait;Vanelle Ivanna TCHOUKA;À faire;2026-11-08;
+P4 · Interface;Écran 01 Accueil · HomeScreen;Vanelle Ivanna TCHOUKA;En cours;2026-11-08;MVVM 3 (UiState)
+P4 · Interface;Écran 02 Choix du monstre · MonsterPickerScreen;Vanelle Ivanna TCHOUKA;En cours;2026-11-08;MVVM 3 (UiState)
+P4 · Interface;Écran 03 Jeu · GameScreen;Vanelle Ivanna TCHOUKA;En cours;2026-11-08;MVVM 3 (UiState)
+P4 · Interface;Écran 04 Marché noir · ShopSheet;Vanelle Ivanna TCHOUKA;En cours;2026-11-08;MVVM 3 (UiState)
+P4 · Interface;Écran Tour d'un bot · BotTurnOverlay;Vanelle Ivanna TCHOUKA;En cours;2026-11-08;MVVM 3 (UiState)
+P7 · Finition & qualité;P7 · Dés en verre lumineux;Vanelle Ivanna TCHOUKA;À faire;2026-11-13;P4 · Composant dé
+P7 · Finition & qualité;P7 · Glitch sur les dégâts;Vanelle Ivanna TCHOUKA;À faire;2026-11-13;
+P7 · Finition & qualité;P7 · Retour haptique;Vanelle Ivanna TCHOUKA;À faire;2026-11-13;
+P7 · Finition & qualité;P7 · Son : boucle synthwave et effets, coupables séparément;Vanelle Ivanna TCHOUKA;À faire;2026-11-13;MVVM 5 (réglages)
+P1 · Wireframes;Corriger l'écran 06 du wireframe : choix de tuile, pas de récompense fixe;Ninon Carmene TSAFACK NGUEMEGNE;À faire;2026-11-08;
+P4 · Interface;Écran 05 Fuir ou Rester · FleeDialog;Ninon Carmene TSAFACK NGUEMEGNE;En cours;2026-11-08;MVVM 3 (UiState)
+P4 · Interface;Écran 06 Palier de Surcharge · MalicePickerSheet;Ninon Carmene TSAFACK NGUEMEGNE;En cours;2026-11-08;MVVM 3 (UiState)
+P4 · Interface;Écran 07 Fin de partie · GameOverScreen;Ninon Carmene TSAFACK NGUEMEGNE;En cours;2026-11-08;MVVM 3 (UiState)
+P4 · Interface;Écrans Règles et Réglages;Ninon Carmene TSAFACK NGUEMEGNE;En cours;2026-11-08;MVVM 5 (réglages)
+P5 · Bots;P5 · Bot heuristique : dés, achats, tuiles;Ninon Carmene TSAFACK NGUEMEGNE;En cours;2026-11-08;P5 · Fonction d'évaluation
+P5 · Bots;P5 · Décision Fuir ou Rester du bot;Ninon Carmene TSAFACK NGUEMEGNE;En cours;2026-11-08;
+P5 · Bots;P5 · Fonction d'évaluation d'un état (★, ♥, énergie, position);Ninon Carmene TSAFACK NGUEMEGNE;En cours;2026-11-08;
+P5 · Bots;P5 · Test : les bots ne jouent que dans legalActions (parties simulées);Ninon Carmene TSAFACK NGUEMEGNE;À faire;2026-11-08;
+P7 · Finition & qualité;P7 · Accessibilité;Ninon Carmene TSAFACK NGUEMEGNE;À faire;2026-11-13;
+P7 · Finition & qualité;P7 · Captures Paparazzi de tous les écrans;Ninon Carmene TSAFACK NGUEMEGNE;À faire;2026-11-13;écrans P4 terminés
+P7 · Finition & qualité;P7 · Compte à rebours Fuir/Rester (option, désactivé par défaut, ignoré sous TalkBack);Ninon Carmene TSAFACK NGUEMEGNE;À faire;2026-11-13;MVVM 5 (réglages)
+P8 · Rendu;P8 · Essais sur appareil réel;Ninon Carmene TSAFACK NGUEMEGNE;À faire;2026-11-16;
+P8 · Rendu;P8 · Scénario de démonstration;Ninon Carmene TSAFACK NGUEMEGNE;À faire;2026-11-16;
