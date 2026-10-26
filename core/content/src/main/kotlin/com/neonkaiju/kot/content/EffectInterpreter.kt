@@ -165,12 +165,14 @@ object EffectInterpreter {
 
     fun applyDirectDamage(state: GameState, victimId: Int, amount: Int): GameState {
         var updatedOccupant = state.tokyoOccupantId
+        var discardedCards = emptyList<CardDef>()
         val newPlayers = state.players.map { p ->
             if (p.id != victimId || !p.isAlive) p
             else {
                 val newHp = (p.hp - amount).coerceAtLeast(0)
                 if (newHp == 0) {
                     if (updatedOccupant == p.id) updatedOccupant = null
+                    discardedCards = discardedCards + p.cards
                     p.copy(
                         hp = 0,
                         isAlive = false,
@@ -184,7 +186,11 @@ object EffectInterpreter {
                 }
             }
         }
-        return state.copy(players = newPlayers, tokyoOccupantId = updatedOccupant)
+        return state.copy(
+            players = newPlayers, 
+            tokyoOccupantId = updatedOccupant,
+            discard = state.discard + discardedCards
+        )
     }
 
     private fun updatePlayer(state: GameState, playerId: Int, block: (PlayerState) -> PlayerState): GameState {
