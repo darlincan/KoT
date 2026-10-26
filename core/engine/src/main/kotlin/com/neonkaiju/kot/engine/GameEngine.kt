@@ -247,6 +247,10 @@ object GameEngine {
                                         ),
                                         actionLog = current.actionLog + "${active.monster.displayName} inflige $dmg dégât(s) à ${occupantAfter.monster.displayName}"
                                     )
+                                } else {
+                                    current = current.copy(
+                                        actionLog = current.actionLog + "${active.monster.displayName} inflige $dmg dégât(s) à ${occupantAfter.monster.displayName} et l'élimine !"
+                                    )
                                 }
                             }
                         } else {
