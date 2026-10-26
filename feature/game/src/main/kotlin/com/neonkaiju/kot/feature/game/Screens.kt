@@ -14,7 +14,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.neonkaiju.kot.content.EffectInterpreter
 import com.neonkaiju.kot.model.*
 import androidx.compose.ui.platform.LocalConfiguration
 import android.content.res.Configuration
@@ -36,10 +35,11 @@ sealed interface UiEvent {
 
 @Composable
 fun HomeScreen(
-    canResume: Boolean,
-    version: String,
+    state: HomeUiState,
     onEvent: (UiEvent) -> Unit
 ) {
+    val canResume = state.canResume
+    val version = state.version
     val isPortrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
 
     if (isPortrait) {
@@ -118,9 +118,10 @@ fun HomeScreen(
 
 @Composable
 fun MonsterPickerScreen(
-    selectedMonster: MonsterId,
+    state: MonsterPickerUiState,
     onEvent: (UiEvent) -> Unit
 ) {
+    val selectedMonster = state.selected
     val isPortrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
 
     Column(
@@ -137,7 +138,7 @@ fun MonsterPickerScreen(
                 modifier = Modifier.fillMaxWidth().weight(1f),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                MonsterId.entries.forEach { monster ->
+                state.monsters.forEach { monster ->
                     val isSelected = monster == selectedMonster
                     Box(
                         modifier = Modifier
@@ -166,7 +167,7 @@ fun MonsterPickerScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                MonsterId.entries.forEach { monster ->
+                state.monsters.forEach { monster ->
                     val isSelected = monster == selectedMonster
                     Box(
                         modifier = Modifier
@@ -200,17 +201,15 @@ fun MonsterPickerScreen(
 
 @Composable
 fun GameScreen(
-    state: GameState,
-    isBotFastForward: Boolean,
+    state: GameUiState,
     onEvent: (UiEvent) -> Unit
 ) {
     var tooltipMessage by remember { mutableStateOf<String?>(null) }
-    
+
     val isPortrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
     if (isPortrait) {
         GameScreenPortrait(
             state = state,
-            isBotFastForward = isBotFastForward,
             onEvent = onEvent,
             tooltipMessage = tooltipMessage,
             setTooltipMessage = { tooltipMessage = it }
@@ -218,10 +217,8 @@ fun GameScreen(
         return
     }
 
-    val legal = remember(state) { com.neonkaiju.kot.engine.GameEngine.legalActions(state) }
-    val me = state.players.first { !it.isBot }
-    val opponents = state.players.filter { it.isBot }
-    val occupant = state.players.firstOrNull { it.id == state.tokyoOccupantId }
+    val me = state.me
+    val occupant = state.tokyoOccupant
 
     Box(
         modifier = Modifier
@@ -237,15 +234,11 @@ fun GameScreen(
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    opponents.forEach { bot ->
-                        PlayerCardCompact(
-                            player = bot,
-                            isOccupant = state.tokyoOccupantId == bot.id,
-                            isActive = state.activePlayer.id == bot.id
-                        )
+                    state.opponents.forEach { bot ->
+                        PlayerCardCompact(player = bot)
                     }
                 }
-                PlayerCardSelf(player = me, isOccupant = state.tokyoOccupantId == me.id)
+                PlayerCardSelf(player = me)
             }
 
             Column(
@@ -265,14 +258,14 @@ fun GameScreen(
                         Text("LA TOUR CENTRALE", color = NeonPalette.NeonCyan, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
                         Spacer(Modifier.height(8.dp))
                         if (occupant != null) {
-                            Text("👑 ${occupant.monster.displayName}", color = NeonPalette.NeonPink, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                            Text("👑 ${occupant.name}", color = NeonPalette.NeonPink, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                             Text("♥ ${occupant.hp}/10   ★ ${occupant.vp}/20", color = NeonPalette.TextPrimary, fontSize = 14.sp)
                         } else {
                             Text("ZONE LIBRE (+1 ★ à l'entrée)", color = NeonPalette.TextPrimary.copy(alpha = 0.7f), fontSize = 14.sp)
                         }
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            text = state.actionLog.lastOrNull() ?: "",
+                            text = state.lastLog,
                             color = NeonPalette.NeonCyan,
                             fontSize = 12.sp
                         )
@@ -299,10 +292,8 @@ fun GameScreen(
                             for (col in 0 until 3) {
                                 val die = state.dice.getOrNull(row * 3 + col)
                                 if (die != null) {
-                                    val canToggle = GameAction.ToggleKeep(die.id) in legal
                                     NeonDieView(
                                         die = die,
-                                        enabled = canToggle,
                                         modifier = Modifier.weight(1f),
                                         onClick = { onEvent(UiEvent.DispatchGameAction(GameAction.ToggleKeep(die.id))) }
                                     )
@@ -313,8 +304,8 @@ fun GameScreen(
                 }
 
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    if (state.phase == TurnPhase.RESOUDRE) {
-                        state.unresolvedSymbols.forEach { sym ->
+                    if (state.isResolving) {
+                        state.symbolsToResolve.forEach { sym ->
                             NeonButton(
                                 text = "Résoudre $sym",
                                 onClick = { onEvent(UiEvent.DispatchGameAction(GameAction.ResolveSymbols(sym))) },
@@ -325,17 +316,17 @@ fun GameScreen(
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
                             NeonButton(
                                 text = "Relancer",
-                                enabled = GameAction.Reroll in legal,
-                                disabledReason = if (state.rollsLeft == 0) "Plus de lancers disponibles" else "Déverrouillez au moins un dé pour relancer",
+                                enabled = state.reroll.enabled,
+                                disabledReason = state.reroll.blockedReason?.label(),
                                 onDisabledLongPress = { tooltipMessage = it },
                                 onClick = { onEvent(UiEvent.DispatchGameAction(GameAction.Reroll)) },
                                 modifier = Modifier.weight(1f)
                             )
                             NeonButton(
                                 text = "Résoudre",
-                                enabled = GameAction.StopRolling in legal,
+                                enabled = state.stopRolling.enabled,
                                 accentColor = NeonPalette.NeonCyan,
-                                disabledReason = "Vous avez déjà arrêté vos lancers",
+                                disabledReason = state.stopRolling.blockedReason?.label(),
                                 onDisabledLongPress = { tooltipMessage = it },
                                 onClick = { onEvent(UiEvent.DispatchGameAction(GameAction.StopRolling)) },
                                 modifier = Modifier.weight(1f)
@@ -344,17 +335,17 @@ fun GameScreen(
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
                             NeonButton(
                                 text = "Marché noir",
-                                enabled = state.phase == TurnPhase.ACHETER,
+                                enabled = state.openShop.enabled,
                                 accentColor = NeonPalette.NeonCyan,
-                                disabledReason = "Le Marché noir n'est accessible qu'en phase d'achat",
+                                disabledReason = state.openShop.blockedReason?.label(),
                                 onDisabledLongPress = { tooltipMessage = it },
                                 onClick = { onEvent(UiEvent.OpenShop) },
                                 modifier = Modifier.weight(1f)
                             )
                             NeonButton(
                                 text = "Fin Tour",
-                                enabled = GameAction.EndTurn in legal,
-                                disabledReason = "Terminez d'abord la résolution de vos dés",
+                                enabled = state.endTurn.enabled,
+                                disabledReason = state.endTurn.blockedReason?.label(),
                                 onDisabledLongPress = { tooltipMessage = it },
                                 onClick = { onEvent(UiEvent.DispatchGameAction(GameAction.EndTurn)) },
                                 modifier = Modifier.weight(1f)
@@ -379,35 +370,30 @@ fun GameScreen(
             }
         }
 
-        if (state.activePlayer.isBot && state.phase != TurnPhase.DECISION_FUITE) {
+        state.botTurn?.let { botTurn ->
             BotTurnOverlay(
-                botName = state.activePlayer.monster.displayName,
-                lastAction = state.actionLog.lastOrNull() ?: "",
-                isFast = isBotFastForward,
+                botName = botTurn.botName,
+                lastAction = botTurn.lastAction,
+                isFast = state.isBotFastForward,
                 onToggleFast = { onEvent(UiEvent.ToggleFastBot) },
                 modifier = Modifier.align(Alignment.TopCenter)
             )
         }
 
-        state.pendingFlee?.let { fleeInfo ->
-            if (fleeInfo.occupantId == me.id) {
-                val attacker = state.players.first { it.id == fleeInfo.attackerId }
-                FleeDialog(
-                    attackerName = attacker.monster.displayName,
-                    damageTaken = fleeInfo.damageTaken,
-                    remainingHp = me.hp,
-                    onFlee = { onEvent(UiEvent.DispatchGameAction(GameAction.Flee)) },
-                    onStay = { onEvent(UiEvent.DispatchGameAction(GameAction.Stay)) }
-                )
-            }
+        state.flee?.let { flee ->
+            FleeDialog(
+                attackerName = flee.attackerName,
+                damageTaken = flee.damageTaken,
+                remainingHp = flee.remainingHp,
+                onFlee = { onEvent(UiEvent.DispatchGameAction(GameAction.Flee)) },
+                onStay = { onEvent(UiEvent.DispatchGameAction(GameAction.Stay)) }
+            )
         }
 
-        if (state.pendingMaliceLevels.isNotEmpty() && !state.activePlayer.isBot) {
-            val level = state.pendingMaliceLevels.first()
-            val tiles = state.availableTiles.filter { it.niveau == level }
+        state.malicePick?.let { pick ->
             MalicePickerSheet(
-                level = level,
-                availableTiles = tiles,
+                level = pick.level,
+                availableTiles = pick.tiles,
                 onPickTile = { onEvent(UiEvent.DispatchGameAction(GameAction.PickMaliceTile(it))) }
             )
         }
@@ -415,7 +401,7 @@ fun GameScreen(
 }
 
 @Composable
-fun NeonDieView(die: Die, enabled: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+fun NeonDieView(die: DieUi, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val symbol = when (die.face) {
         DieFace.ONE -> "1"
         DieFace.TWO -> "2"
@@ -431,7 +417,7 @@ fun NeonDieView(die: Die, enabled: Boolean, modifier: Modifier = Modifier, onCli
             .semantics { contentDescription = "Dé ${die.id + 1} face $symbol ${if (die.isKept) "verrouillé" else "libre"}" }
             .background(NeonPalette.Surface, RoundedCornerShape(8.dp))
             .border(2.dp, borderColor, RoundedCornerShape(8.dp))
-            .clickable(enabled = enabled) { onClick() }
+            .clickable(enabled = die.canToggle) { onClick() }
             .padding(6.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -445,8 +431,8 @@ fun NeonDieView(die: Die, enabled: Boolean, modifier: Modifier = Modifier, onCli
 }
 
 @Composable
-fun PlayerCardCompact(player: PlayerState, isOccupant: Boolean, isActive: Boolean) {
-    val border = if (isActive) NeonPalette.NeonPink else NeonPalette.NeonCyan.copy(alpha = 0.35f)
+fun PlayerCardCompact(player: PlayerUi) {
+    val border = if (player.isActive) NeonPalette.NeonPink else NeonPalette.NeonCyan.copy(alpha = 0.35f)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -459,8 +445,8 @@ fun PlayerCardCompact(player: PlayerState, isOccupant: Boolean, isActive: Boolea
         Text(
             text = buildString {
                 if (!player.isAlive) append("💀 ")
-                else if (isOccupant) append("👑 ")
-                append(player.monster.displayName)
+                else if (player.isInTokyo) append("👑 ")
+                append(player.name)
             },
             color = NeonPalette.TextPrimary,
             fontWeight = FontWeight.Bold,
@@ -471,7 +457,7 @@ fun PlayerCardCompact(player: PlayerState, isOccupant: Boolean, isActive: Boolea
 }
 
 @Composable
-fun PlayerCardSelf(player: PlayerState, isOccupant: Boolean) {
+fun PlayerCardSelf(player: PlayerUi) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -480,7 +466,7 @@ fun PlayerCardSelf(player: PlayerState, isOccupant: Boolean) {
             .padding(10.dp)
     ) {
         Text(
-            text = "${if (isOccupant) "👑 " else ""}${player.monster.displayName} (VOUS)",
+            text = "${if (player.isInTokyo) "👑 " else ""}${player.name} (VOUS)",
             color = NeonPalette.NeonPink,
             fontWeight = FontWeight.ExtraBold,
             fontSize = 14.sp
@@ -537,13 +523,11 @@ fun BotTurnOverlay(
 
 @Composable
 fun ShopSheet(
-    state: GameState,
+    state: ShopUiState,
     onBuy: (String) -> Unit,
     onSweep: () -> Unit,
     onClose: () -> Unit
 ) {
-    val me = state.activePlayer
-    val legal = com.neonkaiju.kot.engine.GameEngine.legalActions(state)
     var tooltip by remember { mutableStateOf<String?>(null) }
 
     Column(
@@ -554,14 +538,14 @@ fun ShopSheet(
         verticalArrangement = Arrangement.SpaceBetween
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("MARCHÉ NOIR — CELLULES DISPONIBLES : ${me.energy} ⚡", color = NeonPalette.NeonCyan, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Text("MARCHÉ NOIR — CELLULES DISPONIBLES : ${state.energy} ⚡", color = NeonPalette.NeonCyan, fontWeight = FontWeight.Bold, fontSize = 18.sp)
             tooltip?.let { Text(it, color = NeonPalette.NeonPink, fontSize = 13.sp) }
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-            state.shop.forEach { card ->
-                val effectiveCost = EffectInterpreter.computeCardCost(state, me.id, card)
-                val canBuy = GameAction.BuyCard(card.id) in legal
+            state.cards.forEach { card ->
+                val effectiveCost = card.cost
+                val canBuy = card.canBuy
                 Column(
                     modifier = Modifier
                         .weight(1f)
@@ -570,14 +554,14 @@ fun ShopSheet(
                         .padding(12.dp),
                     verticalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("${card.nom} (${card.type})", color = NeonPalette.NeonPink, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text("${card.name} (${card.type})", color = NeonPalette.NeonPink, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     Spacer(Modifier.height(6.dp))
-                    Text(card.texte, color = NeonPalette.TextPrimary, fontSize = 12.sp)
+                    Text(card.text, color = NeonPalette.TextPrimary, fontSize = 12.sp)
                     Spacer(Modifier.height(10.dp))
                     NeonButton(
                         text = "Acheter ($effectiveCost ⚡)",
                         enabled = canBuy,
-                        disabledReason = "Il vous faut $effectiveCost ⚡ pour acheter ${card.nom}",
+                        disabledReason = "Il vous faut $effectiveCost ⚡ pour acheter ${card.name}",
                         onDisabledLongPress = { tooltip = it },
                         onClick = { onBuy(card.id) },
                         modifier = Modifier.fillMaxWidth()
@@ -589,7 +573,7 @@ fun ShopSheet(
         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
             NeonButton(
                 text = "Renouveler (2 ⚡)",
-                enabled = GameAction.SweepShop in legal,
+                enabled = state.canSweep,
                 accentColor = NeonPalette.NeonCyan,
                 disabledReason = "Il vous faut 2 ⚡ pour renouveler les cartes",
                 onDisabledLongPress = { tooltip = it },
@@ -636,7 +620,7 @@ fun FleeDialog(
 @Composable
 fun MalicePickerSheet(
     level: Int,
-    availableTiles: List<MaliceTileDef>,
+    availableTiles: List<TileUi>,
     onPickTile: (String) -> Unit
 ) {
     Box(
@@ -658,9 +642,9 @@ fun MalicePickerSheet(
                             .padding(12.dp),
                         verticalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(tile.nom, color = NeonPalette.NeonPink, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Text(tile.name, color = NeonPalette.NeonPink, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                         Spacer(Modifier.height(6.dp))
-                        Text(tile.texte, color = NeonPalette.TextPrimary, fontSize = 12.sp)
+                        Text(tile.text, color = NeonPalette.TextPrimary, fontSize = 12.sp)
                         Spacer(Modifier.height(10.dp))
                         NeonButton("Équiper", onClick = { onPickTile(tile.id) }, modifier = Modifier.fillMaxWidth())
                     }
@@ -672,12 +656,12 @@ fun MalicePickerSheet(
 
 @Composable
 fun GameOverScreen(
-    state: GameState,
+    state: GameOverUiState,
     onReplay: () -> Unit,
     onBackHome: () -> Unit
 ) {
-    val winner = state.players.firstOrNull { it.id == state.winnerId }
-    val ranking = state.players.sortedWith(compareByDescending<PlayerState> { it.isAlive }.thenByDescending { it.vp }.thenByDescending { it.hp })
+    val winnerName = state.winnerName
+    val ranking = state.ranking
 
     val isPortrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
 
@@ -692,15 +676,15 @@ fun GameOverScreen(
         ) {
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = if (winner != null) "VICTOIRE : ${winner.monster.displayName}" else "DESTRUCTION MUTUELLE",
+                    text = if (winnerName != null) "VICTOIRE : $winnerName" else "DESTRUCTION MUTUELLE",
                     color = NeonPalette.NeonPink,
                     fontWeight = FontWeight.ExtraBold,
                     fontSize = 24.sp
                 )
-                Text("Graine de partie : ${state.rng.seed}", color = NeonPalette.NeonCyan, fontSize = 12.sp)
+                Text("Graine de partie : ${state.seed}", color = NeonPalette.NeonCyan, fontSize = 12.sp)
                 ranking.forEachIndexed { idx, p ->
                     Text(
-                        text = "${idx + 1}. ${p.monster.displayName} — ★ ${p.vp} | ♥ ${p.hp} | ⚡ ${p.energy}",
+                        text = "${idx + 1}. ${p.name} — ★ ${p.vp} | ♥ ${p.hp} | ⚡ ${p.energy}",
                         color = NeonPalette.TextPrimary,
                         fontSize = 14.sp
                     )
@@ -723,15 +707,15 @@ fun GameOverScreen(
         ) {
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = if (winner != null) "VICTOIRE : ${winner.monster.displayName}" else "DESTRUCTION MUTUELLE",
+                    text = if (winnerName != null) "VICTOIRE : $winnerName" else "DESTRUCTION MUTUELLE",
                     color = NeonPalette.NeonPink,
                     fontWeight = FontWeight.ExtraBold,
                     fontSize = 24.sp
                 )
-                Text("Graine de partie : ${state.rng.seed}", color = NeonPalette.NeonCyan, fontSize = 12.sp)
+                Text("Graine de partie : ${state.seed}", color = NeonPalette.NeonCyan, fontSize = 12.sp)
                 ranking.forEachIndexed { idx, p ->
                     Text(
-                        text = "${idx + 1}. ${p.monster.displayName} — ★ ${p.vp} | ♥ ${p.hp} | ⚡ ${p.energy}",
+                        text = "${idx + 1}. ${p.name} — ★ ${p.vp} | ♥ ${p.hp} | ⚡ ${p.energy}",
                         color = NeonPalette.TextPrimary,
                         fontSize = 14.sp
                     )
@@ -743,4 +727,12 @@ fun GameOverScreen(
             }
         }
     }
+}
+
+fun BlockedReason.label(): String = when (this) {
+    BlockedReason.NO_ROLLS_LEFT -> "Plus de lancers disponibles"
+    BlockedReason.ALL_DICE_KEPT -> "Déverrouillez au moins un dé pour relancer"
+    BlockedReason.ROLLING_OVER -> "Vos lancers sont terminés pour ce tour"
+    BlockedReason.NOT_BUY_PHASE -> "Le Marché noir n'est accessible qu'en phase d'achat"
+    BlockedReason.RESOLVE_FIRST -> "Terminez d'abord la résolution de vos dés"
 }

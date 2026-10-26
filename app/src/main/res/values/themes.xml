@@ -1,9 +1,9 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Base.Theme.KingOfTokyo" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+<resources>
+    <!-- Thème de fenêtre uniquement : l'interface est entièrement dessinée par NeonKaijuTheme (Compose).
+         Le fond reprend NeonPalette.Background pour éviter un flash blanc au lancement. -->
+    <style name="Theme.KingOfTokyo" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/neon_background</item>
+        <item name="android:statusBarColor">@color/neon_background</item>
+        <item name="android:navigationBarColor">@color/neon_background</item>
     </style>
-
-    <style name="Theme.KingOfTokyo" parent="Base.Theme.KingOfTokyo" />
 </resources>

@@ -12,21 +12,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.neonkaiju.kot.model.GameAction
-import com.neonkaiju.kot.model.GameState
-import com.neonkaiju.kot.model.TurnPhase
 
 @Composable
 fun GameScreenPortrait(
-    state: GameState,
-    isBotFastForward: Boolean,
+    state: GameUiState,
     onEvent: (UiEvent) -> Unit,
     tooltipMessage: String?,
     setTooltipMessage: (String?) -> Unit
 ) {
-    val legal = remember(state) { com.neonkaiju.kot.engine.GameEngine.legalActions(state) }
-    val me = state.players.first { !it.isBot }
-    val opponents = state.players.filter { it.isBot }
-    val occupant = state.players.firstOrNull { it.id == state.tokyoOccupantId }
+    val me = state.me
+    val opponents = state.opponents
+    val occupant = state.tokyoOccupant
 
     Column(
         modifier = Modifier
@@ -43,17 +39,13 @@ fun GameScreenPortrait(
         ) {
             opponents.forEach { bot ->
                 Box(modifier = Modifier.weight(1f)) {
-                    PlayerCardCompact(
-                        player = bot,
-                        isOccupant = state.tokyoOccupantId == bot.id,
-                        isActive = state.activePlayer.id == bot.id
-                    )
+                    PlayerCardCompact(player = bot)
                 }
             }
         }
 
         // Middle Top: My Character
-        PlayerCardSelf(player = me, isOccupant = state.tokyoOccupantId == me.id)
+        PlayerCardSelf(player = me)
 
         // Middle: Central Tower
         Box(
@@ -69,14 +61,14 @@ fun GameScreenPortrait(
                 Text("LA TOUR CENTRALE", color = NeonPalette.NeonCyan, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
                 Spacer(Modifier.height(8.dp))
                 if (occupant != null) {
-                    Text("👑 ${occupant.monster.displayName}", color = NeonPalette.NeonPink, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    Text("👑 ${occupant.name}", color = NeonPalette.NeonPink, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                     Text("♥ ${occupant.hp}/10   ★ ${occupant.vp}/20", color = NeonPalette.TextPrimary, fontSize = 14.sp)
                 } else {
                     Text("ZONE LIBRE (+1 ★ à l'entrée)", color = NeonPalette.TextPrimary.copy(alpha = 0.7f), fontSize = 14.sp)
                 }
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = state.actionLog.lastOrNull() ?: "",
+                    text = state.lastLog,
                     color = NeonPalette.NeonCyan,
                     fontSize = 12.sp
                 )
@@ -104,10 +96,8 @@ fun GameScreenPortrait(
                         for (col in 0 until 3) {
                             val die = state.dice.getOrNull(row * 3 + col)
                             if (die != null) {
-                                val canToggle = GameAction.ToggleKeep(die.id) in legal
                                 NeonDieView(
                                     die = die,
-                                    enabled = canToggle,
                                     modifier = Modifier.weight(1f).height(48.dp),
                                     onClick = { onEvent(UiEvent.DispatchGameAction(GameAction.ToggleKeep(die.id))) }
                                 )
@@ -119,8 +109,8 @@ fun GameScreenPortrait(
 
             // Actions
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                if (state.phase == TurnPhase.RESOUDRE) {
-                    state.unresolvedSymbols.forEach { sym ->
+                if (state.isResolving) {
+                    state.symbolsToResolve.forEach { sym ->
                         NeonButton(
                             text = "Résoudre $sym",
                             onClick = { onEvent(UiEvent.DispatchGameAction(GameAction.ResolveSymbols(sym))) },
@@ -131,17 +121,17 @@ fun GameScreenPortrait(
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
                         NeonButton(
                             text = "Relancer",
-                            enabled = GameAction.Reroll in legal,
-                            disabledReason = if (state.rollsLeft == 0) "Plus de lancers disponibles" else "Déverrouillez au moins un dé pour relancer",
+                            enabled = state.reroll.enabled,
+                            disabledReason = state.reroll.blockedReason?.label(),
                             onDisabledLongPress = { setTooltipMessage(it) },
                             onClick = { onEvent(UiEvent.DispatchGameAction(GameAction.Reroll)) },
                             modifier = Modifier.weight(1f)
                         )
                         NeonButton(
                             text = "Résoudre",
-                            enabled = GameAction.StopRolling in legal,
+                            enabled = state.stopRolling.enabled,
                             accentColor = NeonPalette.NeonCyan,
-                            disabledReason = "Vous avez déjà arrêté vos lancers",
+                            disabledReason = state.stopRolling.blockedReason?.label(),
                             onDisabledLongPress = { setTooltipMessage(it) },
                             onClick = { onEvent(UiEvent.DispatchGameAction(GameAction.StopRolling)) },
                             modifier = Modifier.weight(1f)
@@ -150,17 +140,17 @@ fun GameScreenPortrait(
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
                         NeonButton(
                             text = "Marché noir",
-                            enabled = state.phase == TurnPhase.ACHETER,
+                            enabled = state.openShop.enabled,
                             accentColor = NeonPalette.NeonCyan,
-                            disabledReason = "Le Marché noir n'est accessible qu'en phase d'achat",
+                            disabledReason = state.openShop.blockedReason?.label(),
                             onDisabledLongPress = { setTooltipMessage(it) },
                             onClick = { onEvent(UiEvent.OpenShop) },
                             modifier = Modifier.weight(1f)
                         )
                         NeonButton(
                             text = "Fin Tour",
-                            enabled = GameAction.EndTurn in legal,
-                            disabledReason = "Terminez d'abord la résolution de vos dés",
+                            enabled = state.endTurn.enabled,
+                            disabledReason = state.endTurn.blockedReason?.label(),
                             onDisabledLongPress = { setTooltipMessage(it) },
                             onClick = { onEvent(UiEvent.DispatchGameAction(GameAction.EndTurn)) },
                             modifier = Modifier.weight(1f)

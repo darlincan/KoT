@@ -39,7 +39,8 @@ fun RulesScreen(onBack: () -> Unit) {
 }
 
 @Composable
-fun SettingsScreen(fastBot: Boolean, onToggleFastBot: () -> Unit, onBack: () -> Unit) {
+fun SettingsScreen(state: SettingsUiState, onToggleFastBot: () -> Unit, onBack: () -> Unit) {
+    val fastBot = state.fastBots
     Column(
         modifier = Modifier
             .fillMaxSize()
