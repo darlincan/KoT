@@ -29,7 +29,7 @@ enum class CardType { POUVOIR, ACTION }
 
 @Serializable
 enum class EffectTrigger {
-    ACHAT, DEBUT_TOUR, AVANT_LANCER, APRES_RESOLUTION,
+    ACHAT, DEBUT_TOUR, AVANT_LANCER, AVANT_RESOLUTION, APRES_RESOLUTION,
     AVANT_DEGAT_SUBI, APRES_DEGAT_INFLIGE, ENTREE_TOKYO, FIN_TOUR, PERMANENT
 }
 
@@ -105,6 +105,7 @@ data class PlayerState(
     val tiles: List<MaliceTileDef> = emptyList(),
     val unlockedMaliceLevels: Set<Int> = emptySet(),
     val damageTakenThisTurn: Int = 0,
+    val damagePreventedThisTurn: Int = 0,
     val flags: Set<String> = emptySet()
 )
 
@@ -114,18 +115,24 @@ data class DeterministicRng(
     val cursor: Int = 0
 ) {
     fun nextDieFace(): Pair<DieFace, DeterministicRng> {
-        val mixed = seed xor (cursor.toLong() * 0x5DEECE66DL + 0xBL)
-        val hash = ((mixed ushr 16) xor mixed).toInt() and Int.MAX_VALUE
+        val hash = randomBits(cursor)
         val faces = DieFace.entries
-        return faces[hash % faces.size] to copy(cursor = cursor + 1)
+        return faces[(hash % faces.size).toInt()] to copy(cursor = cursor + 1)
+    }
+
+    // SplitMix64: each cursor yields independent bits, including for nearby seeds.
+    private fun randomBits(index: Int): Long {
+        var z = seed + (index.toLong() + 1) * -7046029254386353131L
+        z = (z xor (z ushr 30)) * -4658895280553007687L
+        z = (z xor (z ushr 27)) * -7723592293110705685L
+        return (z xor (z ushr 31)) ushr 1
     }
 
     fun <T> shuffle(list: List<T>): Pair<List<T>, DeterministicRng> {
         val mutable = list.toMutableList()
         var currentRng = this
         for (i in mutable.lastIndex downTo 1) {
-            val mixed = currentRng.seed xor (currentRng.cursor.toLong() * 6364136223846793005L + 1442695040888963407L)
-            val j = (((mixed ushr 16) xor mixed).toInt() and Int.MAX_VALUE) % (i + 1)
+            val j = (currentRng.randomBits(currentRng.cursor) % (i + 1)).toInt()
             val tmp = mutable[i]
             mutable[i] = mutable[j]
             mutable[j] = tmp
@@ -143,6 +150,7 @@ enum class SymbolResolutionType {
 @Serializable
 sealed interface GameAction {
     @Serializable data class ToggleKeep(val dieId: Int) : GameAction
+    @Serializable data class SetResolutionOrder(val order: List<SymbolResolutionType>) : GameAction
     @Serializable data object Reroll : GameAction
     @Serializable data object StopRolling : GameAction
     @Serializable data class ResolveSymbols(val symbolType: SymbolResolutionType) : GameAction
@@ -155,14 +163,41 @@ sealed interface GameAction {
 }
 
 @Serializable
+data class MarketReceipt(
+    val itemName: String,
+    val energyBefore: Int,
+    val paid: Int,
+    val energyAfter: Int,
+    val effectEnergyChange: Int = 0,
+    val effects: List<String> = emptyList(),
+    val isSweep: Boolean = false
+)
+
+/** Actual resource increases already applied by the engine, retained per player. */
+@Serializable
+data class ResolutionGains(
+    val vp: Int = 0,
+    val energy: Int = 0,
+    val healing: Int = 0,
+    val malice: Int = 0,
+    val isComplete: Boolean = false,
+    val isStartOfTurn: Boolean = false,
+    val numbersVp: Int = 0,
+    val tokyoVp: Int = 0
+)
+
+@Serializable
 data class GameState(
-    val version: Int = 1,
+    val version: Int = 2,
     val rng: DeterministicRng,
     val players: List<PlayerState>,
     val activePlayerIndex: Int = 0,
     val tokyoOccupantId: Int? = null,
     val phase: TurnPhase = TurnPhase.LANCER,
     val rollsLeft: Int = 2,
+    val maxRolls: Int = 3,
+    val resolutionOrder: List<SymbolResolutionType> = listOf(SymbolResolutionType.NUMBERS, SymbolResolutionType.ENERGY, SymbolResolutionType.HEARTS, SymbolResolutionType.CLAWS),
+    val resolutionLogStart: Int = 0,
     val dice: List<Die> = emptyList(),
     val unresolvedSymbols: Set<SymbolResolutionType> = emptySet(),
     val pendingFlee: PendingFleeDecision? = null,
@@ -172,7 +207,14 @@ data class GameState(
     val shop: List<CardDef> = emptyList(),
     val availableTiles: List<MaliceTileDef> = emptyList(),
     val winnerId: Int? = null,
+    val lastMarketReceipts: Map<Int, MarketReceipt> = emptyMap(),
+    val lastResolutionGains: Map<Int, ResolutionGains> = emptyMap(),
+    val actionHistory: List<GameAction> = emptyList(),
     val actionLog: List<String> = emptyList()
 ) {
+    val rollsMade: Int get() = maxRolls - rollsLeft
+    val decisionPlayer: PlayerState get() = if (pendingMaliceLevels.isNotEmpty()) activePlayer
+        else pendingFlee?.let { decision -> players.first { it.id == decision.occupantId } } ?: activePlayer
+    val resolutionSummary: List<String> get() = actionLog.drop(resolutionLogStart)
     val activePlayer: PlayerState get() = players[activePlayerIndex]
 }
