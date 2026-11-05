@@ -12,6 +12,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -324,25 +325,17 @@ fun GameScreen(
                 confirmButton = { NeonButton("Fermer", onClick = { showSummary = false }) })
         }
 
-        state.pendingFlee?.let { fleeInfo ->
-            if (fleeInfo.occupantId == me.id) {
-                val attacker = state.players.first { it.id == fleeInfo.attackerId }
-                FleeDialog(
-                    attackerName = attacker.monster.displayName,
-                    damageTaken = fleeInfo.damageTaken,
-                    remainingHp = me.hp,
-                    onFlee = { onEvent(UiEvent.DispatchGameAction(GameAction.Flee)) },
-                    onStay = { onEvent(UiEvent.DispatchGameAction(GameAction.Stay)) }
-                )
-            }
+        state.toFleeUi()?.let { flee ->
+            FleeDialog(
+                flee = flee,
+                onFlee = { onEvent(UiEvent.DispatchGameAction(GameAction.Flee)) },
+                onStay = { onEvent(UiEvent.DispatchGameAction(GameAction.Stay)) }
+            )
         }
 
-        if (state.pendingMaliceLevels.isNotEmpty() && !state.activePlayer.isBot) {
-            val level = state.pendingMaliceLevels.first()
-            val tiles = state.availableTiles.filter { it.niveau == level }
+        state.toMalicePickUi()?.let { pick ->
             MalicePickerSheet(
-                level = level,
-                availableTiles = tiles,
+                pick = pick,
                 onPickTile = { onEvent(UiEvent.DispatchGameAction(GameAction.PickMaliceTile(it))) }
             )
         }
@@ -490,9 +483,7 @@ fun BotTurnOverlay(
 
 @Composable
 fun FleeDialog(
-    attackerName: String,
-    damageTaken: Int,
-    remainingHp: Int,
+    flee: FleeUi,
     onFlee: () -> Unit,
     onStay: () -> Unit
 ) {
@@ -504,15 +495,23 @@ fun FleeDialog(
     ) {
         Column(
             modifier = Modifier
-                .width(420.dp)
+                .fillMaxWidth(0.85f)
                 .background(NeonPalette.Surface, RoundedCornerShape(12.dp))
                 .border(2.dp, NeonPalette.NeonPink, RoundedCornerShape(12.dp))
-                .padding(20.dp),
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text("ALERTE BRÈCHE DANS LA TOUR", color = NeonPalette.NeonPink, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
-            Text("$attackerName vous a infligé $damageTaken dégât(s). Il vous reste $remainingHp ♥. Fuir libère la Tour pour l’attaquant ; rester vous expose aux prochaines griffes. Les dégâts sont déjà subis dans les deux cas.", color = NeonPalette.TextPrimary, fontSize = 14.sp)
+            Text("${flee.attackerName} vous a infligé ${flee.damageTaken} dégât(s).", color = NeonPalette.TextPrimary, fontSize = 14.sp)
+            Text("Il vous reste ${flee.remainingHp} ♥", color = NeonPalette.NeonPink, fontWeight = FontWeight.ExtraBold, fontSize = 24.sp)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)
+            ) {
+                FleeOption("FUIR", flee.fleeConsequence, NeonPalette.NeonCyan, Modifier.weight(1f))
+                FleeOption("RESTER", flee.stayConsequence, NeonPalette.NeonPink, Modifier.weight(1f))
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                 NeonButton("Fuir la Tour", onClick = onFlee, accentColor = NeonPalette.NeonCyan, modifier = Modifier.weight(1f))
                 NeonButton("Rester", onClick = onStay, accentColor = NeonPalette.NeonPink, modifier = Modifier.weight(1f))
@@ -522,35 +521,74 @@ fun FleeDialog(
 }
 
 @Composable
+private fun FleeOption(title: String, consequence: String, accent: Color, modifier: Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxHeight()
+            .border(1.dp, accent, RoundedCornerShape(8.dp))
+            .padding(8.dp)
+    ) {
+        Text(title, color = accent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+        Text(consequence, color = NeonPalette.TextPrimary, fontSize = 12.sp, lineHeight = 15.sp)
+    }
+}
+
+@Composable
 fun MalicePickerSheet(
-    level: Int,
-    availableTiles: List<MaliceTileDef>,
+    pick: MalicePickUi,
     onPickTile: (String) -> Unit
 ) {
+    val isPortrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(NeonPalette.Background.copy(alpha = 0.94f))
-            .padding(20.dp),
+            .padding(8.dp),
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("PALIER DE SURCHARGE $level ATTEINT : CHOISIR UN POUVOIR", color = NeonPalette.NeonCyan, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                availableTiles.forEach { tile ->
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .background(NeonPalette.Surface, RoundedCornerShape(10.dp))
-                            .border(1.dp, NeonPalette.NeonPink, RoundedCornerShape(10.dp))
-                            .padding(12.dp),
-                        verticalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(tile.nom, color = NeonPalette.NeonPink, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                        Spacer(Modifier.height(6.dp))
-                        Text(tile.texte, color = NeonPalette.TextPrimary, fontSize = 12.sp)
-                        Spacer(Modifier.height(10.dp))
-                        NeonButton("Équiper", onClick = { onPickTile(tile.id) }, modifier = Modifier.fillMaxWidth())
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Palier ${pick.level} : choisir un pouvoir", color = NeonPalette.NeonCyan, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                listOf(3, 6, 10).forEach { tier ->
+                    MaliceTierChip(tier, isCurrent = tier == pick.level, Modifier.weight(1f))
+                }
+            }
+            if (isPortrait) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                    pick.tiles.forEach { tile ->
+                        MaliceTileOffer(tile, onPickTile, Modifier.fillMaxWidth())
+                    }
+                }
+            } else {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)
+                ) {
+                    pick.tiles.forEach { tile ->
+                        MaliceTileOffer(tile, onPickTile, Modifier.weight(1f).fillMaxHeight())
+                    }
+                }
+            }
+            Text(
+                text = if (pick.ownedTiles.isEmpty()) "Pouvoirs détenus : aucun" else "Pouvoirs détenus",
+                color = NeonPalette.NeonCyan,
+                fontSize = 11.sp,
+                modifier = Modifier.fillMaxWidth()
+            )
+            if (pick.ownedTiles.isNotEmpty()) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                    pick.ownedTiles.forEach { tile ->
+                        Text(
+                            text = "${tile.name} · ${tile.text}",
+                            color = NeonPalette.TextPrimary,
+                            fontSize = 11.sp,
+                            lineHeight = 13.sp,
+                            modifier = Modifier
+                                .weight(1f)
+                                .border(1.dp, NeonPalette.NeonCyan.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                                .padding(6.dp)
+                        )
                     }
                 }
             }
@@ -559,74 +597,128 @@ fun MalicePickerSheet(
 }
 
 @Composable
+private fun MaliceTierChip(tier: Int, isCurrent: Boolean, modifier: Modifier) {
+    val accent = if (isCurrent) NeonPalette.NeonPink else NeonPalette.NeonCyan.copy(alpha = 0.4f)
+    Column(
+        modifier = modifier
+            .border(1.dp, accent, RoundedCornerShape(6.dp))
+            .padding(4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text("Palier $tier", color = if (isCurrent) NeonPalette.NeonPink else NeonPalette.TextPrimary, fontWeight = FontWeight.Bold, fontSize = 11.sp, lineHeight = 13.sp)
+        Text("Choisir un pouvoir", color = NeonPalette.TextPrimary, fontSize = 10.sp, lineHeight = 12.sp)
+    }
+}
+
+@Composable
+private fun MaliceTileOffer(tile: TileUi, onPickTile: (String) -> Unit, modifier: Modifier) {
+    Column(
+        modifier = modifier
+            .background(NeonPalette.Surface, RoundedCornerShape(10.dp))
+            .border(1.dp, NeonPalette.NeonPink, RoundedCornerShape(10.dp))
+            .padding(8.dp),
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column {
+            Text(tile.name, color = NeonPalette.NeonPink, fontWeight = FontWeight.Bold, fontSize = 14.sp, lineHeight = 17.sp)
+            Text(tile.text, color = NeonPalette.TextPrimary, fontSize = 12.sp, lineHeight = 15.sp)
+        }
+        Spacer(Modifier.height(4.dp))
+        NeonButton("Équiper", onClick = { onPickTile(tile.id) }, modifier = Modifier.fillMaxWidth())
+    }
+}
+
+@Composable
 fun GameOverScreen(
-    state: GameState,
+    state: GameOverUiState,
     onReplay: () -> Unit,
     onBackHome: () -> Unit
 ) {
-    val winner = state.players.firstOrNull { it.id == state.winnerId }
-    val ranking = state.players.sortedWith(compareByDescending<PlayerState> { it.isAlive }.thenByDescending { it.vp }.thenByDescending { it.hp })
-
     val isPortrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
+    val frame = Modifier
+        .fillMaxSize()
+        .background(NeonPalette.Background)
+        .systemBarsPadding()
+        .padding(16.dp)
 
     if (isPortrait) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(NeonPalette.Background)
-                .padding(20.dp),
-            verticalArrangement = Arrangement.SpaceBetween,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = if (winner != null) "VICTOIRE : ${winner.monster.displayName}" else "DESTRUCTION MUTUELLE",
-                    color = NeonPalette.NeonPink,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 24.sp
-                )
-                ranking.forEachIndexed { idx, p ->
-                    Text(
-                        text = "${idx + 1}. ${p.monster.displayName} — ★ ${p.vp} | ♥ ${p.hp} | ⚡ ${p.energy}",
-                        color = NeonPalette.TextPrimary,
-                        fontSize = 14.sp
-                    )
-                }
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                NeonButton("Rejouer", onClick = onReplay, modifier = Modifier.fillMaxWidth())
-                NeonButton("Accueil", onClick = onBackHome, accentColor = NeonPalette.NeonCyan, modifier = Modifier.fillMaxWidth())
-            }
+        Column(modifier = frame, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            GameOverHeadline(state, Modifier.fillMaxWidth())
+            GameOverRanking(state, Modifier.fillMaxWidth())
+            Spacer(Modifier.weight(1f))
+            GameOverActions(onReplay, onBackHome)
         }
     } else {
         Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(NeonPalette.Background)
-                .systemBarsPadding()
-                .padding(20.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = frame,
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = if (winner != null) "VICTOIRE : ${winner.monster.displayName}" else "DESTRUCTION MUTUELLE",
-                    color = NeonPalette.NeonPink,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 24.sp
-                )
-                ranking.forEachIndexed { idx, p ->
-                    Text(
-                        text = "${idx + 1}. ${p.monster.displayName} — ★ ${p.vp} | ♥ ${p.hp} | ⚡ ${p.energy}",
-                        color = NeonPalette.TextPrimary,
-                        fontSize = 14.sp
-                    )
-                }
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                NeonButton("Rejouer", onClick = onReplay)
-                NeonButton("Accueil", onClick = onBackHome, accentColor = NeonPalette.NeonCyan)
+            GameOverHeadline(state, Modifier.weight(0.4f))
+            Column(modifier = Modifier.weight(0.6f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                GameOverRanking(state, Modifier.fillMaxWidth())
+                GameOverActions(onReplay, onBackHome)
             }
         }
     }
+}
+
+@Composable
+private fun GameOverHeadline(state: GameOverUiState, modifier: Modifier) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(state.endReason.label(), color = NeonPalette.NeonCyan, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+        Text(
+            text = state.winnerName?.let { "$it règne sur la mégapole" } ?: "Personne ne règne sur la mégapole",
+            color = NeonPalette.NeonPink,
+            fontWeight = FontWeight.ExtraBold,
+            fontSize = 24.sp,
+            lineHeight = 28.sp
+        )
+        Text("Graine de partie : ${state.seed}", color = NeonPalette.TextPrimary, fontSize = 12.sp)
+    }
+}
+
+@Composable
+private fun GameOverRanking(state: GameOverUiState, modifier: Modifier) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        state.ranking.forEachIndexed { index, player ->
+            val isWinner = player.name == state.winnerName
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(NeonPalette.Surface, RoundedCornerShape(8.dp))
+                    .border(1.dp, if (isWinner) NeonPalette.NeonPink else NeonPalette.NeonCyan.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "${if (player.isAlive) index + 1 else "–"}  ${player.name}${if (player.id == state.humanId) " (vous)" else ""}",
+                    color = if (isWinner) NeonPalette.NeonPink else NeonPalette.TextPrimary,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    text = "★ ${player.vp}  ♥ ${player.hp}  ⚡ ${player.energy}${if (player.isAlive) "" else "  · éliminé"}",
+                    color = NeonPalette.NeonCyan,
+                    fontSize = 12.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun GameOverActions(onReplay: () -> Unit, onBackHome: () -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+        NeonButton("Accueil", onClick = onBackHome, accentColor = NeonPalette.NeonCyan, modifier = Modifier.weight(1f))
+        NeonButton("Rejouer", onClick = onReplay, modifier = Modifier.weight(1f))
+    }
+}
+
+fun GameEndReason.label(): String = when (this) {
+    GameEndReason.TWENTY_STARS -> "VICTOIRE PAR 20 ★"
+    GameEndReason.LAST_SURVIVOR -> "DERNIER SURVIVANT"
+    GameEndReason.ALL_ELIMINATED -> "TOUS ÉLIMINÉS"
 }

@@ -198,6 +198,17 @@
   .tier b { display: block; font-family: var(--display); font-size: 16px; }
   .tier.on { border-color: var(--pink); color: var(--ink); }
   .tier.on b { color: var(--pink); text-shadow: 0 0 8px var(--pink); }
+  .palier-title { font-family: var(--display); font-weight: 900; font-size: 15px; text-align: center; color: var(--cyan); text-shadow: 0 0 10px rgba(40,224,255,.7); }
+  .tile { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; padding: 8px; border-color: var(--pink); }
+  .tile b { font-family: var(--display); font-size: 10px; color: var(--pink); }
+  .tile p { margin: 3px 0 0; font-size: 11px; line-height: 1.25; }
+  .tile .btn { padding: 7px; font-size: 9px; }
+  .owned { padding: 6px 8px; font-size: 10px; line-height: 1.25; }
+  .owned b { color: var(--cyan); }
+  .tiles-line { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; min-height: 0; }
+  .land .tile { grid-template-columns: 1fr; align-content: space-between; padding: 6px; }
+  .land .tier { padding: 3px; font-size: 9px; }
+  .land .tier b { font-size: 11px; }
   .hbar { height: 10px; border-radius: 5px; background: var(--panel); border: 1px solid var(--line); position: relative; overflow: hidden; }
   .hbar i { position: absolute; inset: 0 40% 0 0; background: linear-gradient(90deg, var(--cyan), var(--pink)); }
   .hbar-scale { display: flex; justify-content: space-between; font-family: var(--display); font-size: 9px; color: var(--ink-dim); margin-top: 4px; }
@@ -455,36 +466,21 @@
     <!-- 6 · Palier de Surcharge -->
     <figure>
       <div class="phone">
-        <div class="topbar">
-          <div class="sq">≡</div>
-          <div class="who"><b>VOLTRAX</b><span>Résolution</span></div>
-          <div class="sq">?</div>
-        </div>
         <div class="spacer"></div>
-        <div style="text-align:center">
-          <div class="label" style="color:var(--cyan)">Palier atteint</div>
-          <div class="glitch" style="font-family:var(--display);font-weight:900;font-size:30px;margin-top:6px;text-shadow:0 0 16px rgba(255,61,154,.8)">SURCHARGE 6</div>
-        </div>
-        <div>
-          <div class="hbar"><i></i></div>
-          <div class="hbar-scale num"><span>0</span><span>3</span><span>6</span><span>10</span></div>
-        </div>
+        <div class="glitch palier-title">Palier 6 : choisir un pouvoir</div>
         <div class="tiers">
-          <div class="card tier"><b>3</b>+1 dégât de griffe</div>
-          <div class="card tier on"><b>6</b>Débloque un pouvoir Surcharge</div>
-          <div class="card tier"><b>10</b>Forme ultime</div>
+          <div class="card tier"><b>Palier 3</b>Choisir un pouvoir</div>
+          <div class="card tier on"><b>Palier 6</b>Choisir un pouvoir</div>
+          <div class="card tier"><b>Palier 10</b>Choisir un pouvoir</div>
         </div>
-        <div class="label">Choisissez un pouvoir</div>
-        <div class="card offer" style="grid-template-columns:48px 1fr;border-color:var(--pink)">
-          <div class="ph" style="min-height:52px">[fx]</div>
-          <div><div class="t"><b>Court-circuit</b></div><p style="margin-top:4px">Une fois par tour, relancez un dé adverse.</p></div>
-        </div>
-        <div class="card offer" style="grid-template-columns:48px 1fr">
-          <div class="ph" style="min-height:52px">[fx]</div>
-          <div><div class="t"><b>Arc électrique</b></div><p style="margin-top:4px">Chaque dé Éclair rapporte 1 cellule de plus.</p></div>
-        </div>
+        <div class="label">Pouvoirs disponibles · palier 6</div>
+        <div class="card tile"><div><b>Arc électrique</b><p>Gagnez 1 ★ au début de votre tour.</p></div><div class="btn pink">Équiper</div></div>
+        <div class="card tile"><div><b>Bouclier déflecteur</b><p>Annule 1 dégât à chaque attaque subie.</p></div><div class="btn pink">Équiper</div></div>
+        <div class="card tile"><div><b>Réacteur à fusion</b><p>Gagnez 2 Cellules au début de votre tour.</p></div><div class="btn pink">Équiper</div></div>
+        <div class="card tile"><div><b>Prédateur Néon</b><p>Gagnez 1 ★ supplémentaire en entrant dans la Tour.</p></div><div class="btn pink">Équiper</div></div>
+        <div class="label">Pouvoirs détenus</div>
+        <div class="card owned"><b>Court-circuit</b> · Gagnez 1 Cellule au début de chaque tour.</div>
         <div class="spacer"></div>
-        <div class="btn pink">Activer</div>
       </div>
       <figcaption><b>06</b> Palier de Surcharge (3 / 6 / 10)</figcaption>
     </figure>
@@ -698,38 +694,21 @@
     <figure>
       <div class="scroller"><div class="phone land">
         <div class="col grow">
-          <div class="topbar">
-            <div class="sq">≡</div>
-            <div class="who" style="text-align:left"><b>VOLTRAX</b><span>Résolution</span></div>
-          </div>
-          <div class="spacer"></div>
-          <div style="text-align:center">
-            <div class="label" style="color:var(--cyan)">Palier atteint</div>
-            <div class="glitch" style="font-family:var(--display);font-weight:900;font-size:26px;margin-top:4px;text-shadow:0 0 16px rgba(255,61,154,.8)">SURCHARGE 6</div>
-          </div>
-          <div>
-            <div class="hbar"><i></i></div>
-            <div class="hbar-scale num"><span>0</span><span>3</span><span>6</span><span>10</span></div>
-          </div>
+          <div class="glitch palier-title">Palier 6 : choisir un pouvoir</div>
           <div class="tiers">
-            <div class="card tier"><b>3</b>+1 dégât de griffe</div>
-            <div class="card tier on"><b>6</b>Débloque un pouvoir</div>
-            <div class="card tier"><b>10</b>Forme ultime</div>
+            <div class="card tier"><b>Palier 3</b>Choisir un pouvoir</div>
+            <div class="card tier on"><b>Palier 6</b>Choisir un pouvoir</div>
+            <div class="card tier"><b>Palier 10</b>Choisir un pouvoir</div>
           </div>
-          <div class="spacer"></div>
-        </div>
-        <div class="col" style="width:240px">
-          <div class="label">Choisissez un pouvoir</div>
-          <div class="card offer" style="grid-template-columns:44px 1fr;border-color:var(--pink)">
-            <div class="ph" style="min-height:48px">[fx]</div>
-            <div><div class="t"><b>Court-circuit</b></div><p style="margin-top:4px">Une fois par tour, relancez un dé adverse.</p></div>
+          <div class="label">Pouvoirs disponibles · palier 6</div>
+          <div class="tiles-line grow">
+            <div class="card tile"><div><b>Arc électrique</b><p>Gagnez 1 ★ au début de votre tour.</p></div><div class="btn pink">Équiper</div></div>
+            <div class="card tile"><div><b>Bouclier déflecteur</b><p>Annule 1 dégât à chaque attaque subie.</p></div><div class="btn pink">Équiper</div></div>
+            <div class="card tile"><div><b>Réacteur à fusion</b><p>Gagnez 2 Cellules au début de votre tour.</p></div><div class="btn pink">Équiper</div></div>
+            <div class="card tile"><div><b>Prédateur Néon</b><p>Gagnez 1 ★ supplémentaire en entrant dans la Tour.</p></div><div class="btn pink">Équiper</div></div>
           </div>
-          <div class="card offer" style="grid-template-columns:44px 1fr">
-            <div class="ph" style="min-height:48px">[fx]</div>
-            <div><div class="t"><b>Arc électrique</b></div><p style="margin-top:4px">Chaque dé Éclair rapporte 1 cellule de plus.</p></div>
-          </div>
-          <div class="spacer"></div>
-          <div class="btn pink">Activer</div>
+          <div class="label">Pouvoirs détenus</div>
+          <div class="card owned"><b>Court-circuit</b> · Gagnez 1 Cellule au début de chaque tour.</div>
         </div>
       </div></div>
       <figcaption><b>06</b> Palier de Surcharge · paysage</figcaption>
