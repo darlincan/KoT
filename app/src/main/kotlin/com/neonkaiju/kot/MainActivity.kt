@@ -151,7 +151,7 @@ class MainActivity : ComponentActivity() {
                     }
                     AppRoute.GAME_OVER -> gameState?.let { state ->
                         GameOverScreen(
-                            state = state,
+                            state = state.toGameOverUiState(),
                             onReplay = { route = AppRoute.PICK_MONSTER },
                             onBackHome = { route = AppRoute.HOME }
                         )
