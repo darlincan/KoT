@@ -7,40 +7,25 @@ interface BotPolicy {
     fun chooseAction(state: GameState): GameAction
 }
 
+/** Griffes qu'un adversaire inflige en moyenne en un tour, sur les 6 qu'il peut obtenir au maximum. */
+private const val EXPECTED_CLAWS_NUMERATOR = 3
+private const val EXPECTED_CLAWS_DENOMINATOR = 2
+
 /** One policy for all bots; priorities depend on health, opponents, and the current dice. */
 class HeuristicBotPolicy : BotPolicy {
     override fun chooseAction(state: GameState): GameAction {
         val legal = GameEngine.legalActions(state)
         require(legal.isNotEmpty()) { "Aucune action légale disponible pour le bot" }
         val bot = state.decisionPlayer
-        legal.filterIsInstance<GameAction.PickMaliceTile>().maxByOrNull { action ->
-            state.availableTiles.first { it.id == action.tileId }.effets.sumOf { effectValue(it, bot) }
-        }?.let { return it }
+        val tilePicks = legal.filterIsInstance<GameAction.PickMaliceTile>()
+        if (tilePicks.isNotEmpty()) return bestByEvaluation(state, tilePicks)
 
         return when (state.phase) {
-            TurnPhase.DECISION_FUITE -> {
-                val opponents = state.players.filter { it.isAlive && it.id != bot.id }
-                val threshold = if (bot.vp >= 18) 2 else if (opponents.size >= 3) 5 else 3
-                if (bot.hp <= threshold) GameAction.Flee else GameAction.Stay
-            }
+            TurnPhase.DECISION_FUITE -> chooseFleeOrStay(state, legal)
             TurnPhase.LANCER -> chooseRollAction(state, bot, legal)
             TurnPhase.RESOUDRE -> legal.filterIsInstance<GameAction.ResolveSymbols>()
                 .minByOrNull { state.resolutionOrder.indexOf(it.symbolType) } ?: legal.first()
-            TurnPhase.ACHETER -> {
-                legal.filterIsInstance<GameAction.BuyCard>().map { action ->
-                    val card = state.shop.first { it.id == action.cardId }
-                    val result = GameEngine.reduce(state, action)
-                    val after = result.players.first { it.id == bot.id }
-                    val score = if (!after.isAlive) -1000.0 else {
-                        (after.vp - bot.vp) * 4.0 + (after.hp - bot.hp) * (if (bot.hp <= 5) 3.0 else 1.0) +
-                            (after.energy - bot.energy) * 0.6 +
-                            state.players.filter { it.id != bot.id }.sumOf { old ->
-                                (old.hp - result.players.first { it.id == old.id }.hp).toDouble()
-                            } + if (card.type == CardType.POUVOIR) card.effets.sumOf { effectValue(it, bot) } * 2 else 0.0
-                    }
-                    action to score
-                }.filter { it.second > 0 }.maxByOrNull { it.second }?.first ?: GameAction.EndTurn
-            }
+            TurnPhase.ACHETER -> bestByEvaluation(state, legal.filterIsInstance<GameAction.BuyCard>() + GameAction.EndTurn)
             else -> legal.first()
         }.also { require(it in legal) }
     }
@@ -75,16 +60,43 @@ class HeuristicBotPolicy : BotPolicy {
         return "$name $reason."
     }
 
-    private fun effectValue(effect: EffectDef, bot: PlayerState): Double = when (effect.operation) {
-        EffectOperation.gainHp -> effect.valeur * if (bot.hp <= 5) 2.0 else 0.6
-        EffectOperation.gainVp -> effect.valeur * if (bot.vp >= 15) 4.0 else 2.0
-        EffectOperation.gainEnergy -> effect.valeur * 1.5
-        EffectOperation.annulerDegat -> effect.valeur * if (bot.hp <= 6) 3.0 else 2.0
-        EffectOperation.modifyCost -> -effect.valeur * 1.5
-        EffectOperation.dealDamage -> effect.valeur * 1.2
-        EffectOperation.changerFace, EffectOperation.rerollDice -> 1.5
-        EffectOperation.setFlag -> 0.0
+    /**
+     * Simule chaque candidate jusqu'à la fin du tour et garde la mieux notée. Passer par la fin du tour
+     * compare un achat et [GameAction.EndTurn] à égalité, avec les mêmes effets de fin de tour.
+     */
+    private fun bestByEvaluation(state: GameState, candidates: List<GameAction>): GameAction {
+        val botId = state.activePlayer.id
+        return candidates.maxBy { action ->
+            evaluate(playOutTurn(GameEngine.reduce(state, action)), botId)
+        }
     }
+
+    private fun playOutTurn(state: GameState): GameState =
+        if (GameAction.EndTurn in GameEngine.legalActions(state)) GameEngine.reduce(state, GameAction.EndTurn) else state
+
+    /**
+     * Compare deux projections du prochain tour plutôt que [GameEngine.reduce], qui lancerait les dés du
+     * joueur suivant. Le bot concerné est l'occupant, pas le joueur actif.
+     */
+    private fun chooseFleeOrStay(state: GameState, legal: List<GameAction>): GameAction {
+        val decision = state.pendingFlee ?: return legal.first()
+        val botId = decision.occupantId
+        val opponents = state.players.count { it.id != botId && it.isAlive }
+        val expectedClaws = opponents * EXPECTED_CLAWS_NUMERATOR / EXPECTED_CLAWS_DENOMINATOR
+
+        val ifStays = state.projected(botId, damage = expectedClaws, stars = 2, occupantId = botId)
+        val ifFlees = state.projected(botId, damage = 1, stars = 0, occupantId = decision.attackerId)
+
+        return if (evaluate(ifStays, botId) > evaluate(ifFlees, botId)) GameAction.Stay else GameAction.Flee
+    }
+
+    private fun GameState.projected(playerId: Int, damage: Int, stars: Int, occupantId: Int): GameState = copy(
+        tokyoOccupantId = occupantId,
+        players = players.map { player ->
+            if (player.id != playerId) player
+            else player.copy(hp = (player.hp - damage).coerceAtLeast(0), vp = (player.vp + stars).coerceAtMost(20))
+        },
+    )
 
     private fun chooseRollAction(state: GameState, bot: PlayerState, legal: List<GameAction>): GameAction {
         val inTokyo = state.tokyoOccupantId == bot.id

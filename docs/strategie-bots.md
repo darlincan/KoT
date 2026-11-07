@@ -44,42 +44,32 @@ Les égalités d’évaluation des achats ou des tuiles sont départagées par l
 
 ## 4. Rester ou fuir Tokyo
 
-Après une blessure, le bot fuit si sa santé est inférieure ou égale à son seuil :
+Le décideur est l’occupant blessé. Il note avec `evaluate` deux projections de son prochain tour, sans appeler le moteur, pour ne pas lancer les dés du joueur suivant :
 
-- 2 PV s’il possède déjà au moins 18 ★ ;
-- sinon 5 PV face à trois autres survivants ;
-- sinon 3 PV.
+- rester : +2 ★ et une perte moyenne de griffes qui dépend des adversaires vivants (1 ♥ face à un, 3 ♥ face à deux, 4 ♥ face à trois) ;
+- fuir : perte de 1 ♥, et l’attaquant occupe la Tour.
 
-Il reste au-dessus de ce seuil. La proximité de la victoire l’incite donc à défendre sa position, sans annuler les dégâts déjà reçus. Les dégâts d’une carte n’ouvrent pas de choix de fuite.
+Il ne reste que si cette projection est strictement meilleure. À 18 ★ et avec assez de ♥ pour survivre, rester mène à 20 ★ et l’emporte sur tout le reste ; à 2 ♥ face à trois adversaires, il fuit. Les dégâts d’une carte n’ouvrent pas de choix de fuite.
 
 ## 5. Achats et tuiles
 
-Le bot simule chaque achat légal sur un état immuable. Cela ne modifie ni la partie réelle ni son curseur aléatoire. Il écarte un achat qui l’éliminerait. Le score est :
+Le bot simule chaque candidat sur un état immuable, puis garde la meilleure note `evaluate` (`core/ai/.../Evaluation.kt`). Cela ne modifie ni la partie réelle ni son curseur aléatoire. Pour les achats, chaque candidat est joué jusqu’à la fin du tour et comparé à `EndTurn`, afin que tous subissent les mêmes effets de fin de tour. Cette version n’utilise pas volontairement le renouvellement du marché : le joueur humain conserve cette possibilité.
 
-```text
-4 × variation de ★
-+ variation de PV × (3 si santé initiale ≤ 5, sinon 1)
-+ 0,6 × variation d’énergie (prix et gains compris)
-+ dégâts infligés aux autres monstres
-+ 2 × valeur des effets pour une carte POUVOIR
-```
+La note est une fonction pure qui ne lit que l’information publique, jamais les dés, la pioche ou le marché :
 
-Seuls les scores strictement positifs sont retenus. Après chaque achat, le marché est remplacé par le moteur puis réévalué. Sans achat assez intéressant, le bot termine le tour. Cette version n’utilise pas volontairement le renouvellement du marché : le joueur humain conserve cette possibilité.
-
-La valeur des effets, également utilisée pour les tuiles, est la suivante :
-
-| Effet | Valeur par unité |
+| Élément | Valeur |
 | --- | --- |
-| Soin | 2 si santé ≤ 5, sinon 0,6 |
-| Points | 4 si points ≥ 15, sinon 2 |
-| Énergie | 1,5 |
-| Annulation de dégâts | 3 si santé ≤ 6, sinon 2 |
-| Réduction de coût | 1,5 par Cellule de réduction |
-| Dégâts | 1,2 |
-| Modification de face ou manipulation des lancers | 1,5 |
-| Drapeau seul | 0 |
+| Élimination, défaite en fin de partie | note minimale |
+| Victoire, ou 20 ★ en étant vivant | note maximale |
+| ★ | 10 par ★, plus 3 × (★ − 14)² au-delà de 14 |
+| ♥ | 4 par ♥, moins 25 par ♥ manquant sous 4 |
+| Cellule | 2 |
+| Carte POUVOIR | 2,5 × son prix |
+| Tuile | 12, plus la valeur de ses effets |
+| Tour centrale | 15 − 30 × adversaires vivants / ♥ |
+| Adversaire | −1 par ♥, et −2 × (★ − 15)² au-delà de 15 |
 
-Il s’agit d’une estimation simple : les déclencheurs futurs et toutes les conditions ne sont pas intégralement projetés dans le futur. Les effets immédiats et les coûts réels sont toutefois calculés par la simulation du moteur.
+Dans une tuile, chaque unité d’effet vaut 10 pour les ★, 5 pour une annulation de dégât, 4 pour un soin, 3 pour un dégât, 2 pour une Cellule ou une réduction de coût, et 1 pour les autres effets. Il s’agit d’une estimation simple : les déclencheurs futurs et toutes les conditions ne sont pas projetés dans le futur.
 
 ## 6. Exemples vérifiables
 
