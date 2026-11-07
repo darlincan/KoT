@@ -4,7 +4,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.neonkaiju.kot.ai.BotPolicy
-import com.neonkaiju.kot.ai.BotTurnPresenter
 import com.neonkaiju.kot.data.CatalogRepository
 import com.neonkaiju.kot.data.GameRepository
 import com.neonkaiju.kot.data.SettingsRepository
@@ -19,6 +18,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import javax.inject.Named
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -68,7 +68,16 @@ class GameViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     private val botsActive = MutableStateFlow(false)
-    private val botPresenter = BotTurnPresenter(botPolicy)
+
+    /** Choix du bot calculé une seule fois par état, partagé par l'affichage et la boucle des bots. */
+    private val botPlan: StateFlow<BotPlan?> = _game
+        .map { state ->
+            state?.takeIf { it.awaitsBot() }?.let {
+                val action = botPolicy.chooseAction(it)
+                BotPlan(it, action, botPolicy.explainAction(it, action))
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private val _effects = Channel<GameEffect>(Channel.BUFFERED)
     val effects: Flow<GameEffect> = _effects.receiveAsFlow()
@@ -82,8 +91,8 @@ class GameViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), MonsterPickerUiState(selected = selectedMonster.value))
 
     /** a une valeur egale a null tant qu'aucune partie n'est start. */
-    val gameUiState: StateFlow<GameUiState?> = combine(_game, fastBots) { game, fast ->
-        game?.toGameUiState(fast, game.botExplanation())
+    val gameUiState: StateFlow<GameUiState?> = combine(_game, fastBots, botPlan) { game, fast, plan ->
+        game?.toGameUiState(fast, plan?.takeIf { it.state === game }?.explanation)
     }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
 
@@ -141,11 +150,11 @@ class GameViewModel @Inject constructor(
     }
 
     private suspend fun playBots() {
-        combine(_game, botsActive, fastBots, ::Triple).collectLatest { (state, active, fast) ->
-            if (state == null || !active || !state.awaitsBot()) return@collectLatest
-            // rule transverse 1 : chaque action de bot reste visible au moins 400 ms.
-            val action = botPresenter.nextAction(state, fast) { true } ?: return@collectLatest
-            apply(state, action)
+        // collectLatest annule l'attente dès que la partie change, que l'écran se cache ou que le réglage change.
+        combine(botPlan, botsActive, fastBots, ::Triple).collectLatest { (plan, active, fast) ->
+            if (plan == null || !active) return@collectLatest
+            delay(botDelayMillis(plan.action, fast))
+            if (_game.value === plan.state) apply(plan.state, plan.action)
         }
     }
 
@@ -157,9 +166,6 @@ class GameViewModel @Inject constructor(
         }
         update(next)
     }
-
-    private fun GameState.botExplanation(): String? =
-        if (awaitsBot()) botPolicy.explainAction(this, botPolicy.chooseAction(this)) else null
 
     private fun update(state: GameState) {
         _game.value = state
