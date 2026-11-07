@@ -3,21 +3,27 @@ package com.neonkaiju.kot.feature.game
 import androidx.compose.runtime.Composable
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
+import app.cash.paparazzi.detectEnvironment
 import com.android.resources.ScreenOrientation
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
-/** Une capture par écran, en paysage, sur un téléphone et une tablette. */
+/** Une capture par écran, en paysage, sur un téléphone et une tablette, avec API 29 et 31. */
 @RunWith(Parameterized::class)
-class ScreensSnapshotTest(private val device: DeviceConfig, private val deviceName: String) {
+class ScreensSnapshotTest(private val device: DeviceConfig, private val deviceName: String, private val apiLevel: Int) {
 
     @get:Rule
-    val paparazzi = Paparazzi(deviceConfig = device, showSystemUi = false, theme = "android:Theme.Material.NoActionBar")
+    val paparazzi = Paparazzi(
+        deviceConfig = device,
+        showSystemUi = false,
+        theme = "android:Theme.Material.NoActionBar",
+        environment = detectEnvironment().copy(compileSdkVersion = apiLevel),
+    )
 
     private fun capture(name: String, content: @Composable () -> Unit) =
-        paparazzi.snapshot("${deviceName}_$name") { NeonKaijuTheme(content) }
+        paparazzi.snapshot("${deviceName}_api${apiLevel}_$name") { NeonKaijuTheme(content) }
 
     @Test fun home() = capture("01_accueil") { HomeScreen(PreviewData.home, onEvent = {}) }
     @Test fun picker() = capture("02_monstre") { MonsterPickerScreen(PreviewData.picker, onEvent = {}) }
@@ -32,10 +38,12 @@ class ScreensSnapshotTest(private val device: DeviceConfig, private val deviceNa
 
     companion object {
         @JvmStatic
-        @Parameterized.Parameters(name = "{1}")
-        fun devices() = listOf(
-            arrayOf(DeviceConfig.PIXEL_5.copy(orientation = ScreenOrientation.LANDSCAPE, softButtons = false), "telephone"),
-            arrayOf(DeviceConfig.NEXUS_10.copy(orientation = ScreenOrientation.LANDSCAPE, softButtons = false), "tablette"),
-        )
+        @Parameterized.Parameters(name = "{1}_api{2}")
+        fun devices() = listOf(29, 31).flatMap { api ->
+            listOf(
+                arrayOf(DeviceConfig.PIXEL_5.copy(orientation = ScreenOrientation.LANDSCAPE, softButtons = false), "telephone", api),
+                arrayOf(DeviceConfig.NEXUS_10.copy(orientation = ScreenOrientation.LANDSCAPE, softButtons = false), "tablette", api),
+            )
+        }
     }
 }
