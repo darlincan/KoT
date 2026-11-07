@@ -21,6 +21,7 @@ internal fun PlayerState.toUi(state: GameState) = PlayerUi(
     isInTokyo = state.tokyoOccupantId == id,
     isActive = state.activePlayer.id == id,
     gains = state.lastResolutionGains[id],
+    cardCount = cards.size,
 )
 
 /** Pendant la décision d'un bot, le joueur humain ne dispose d'aucune action. */
@@ -50,6 +51,7 @@ internal fun GameState.toMalicePickUi(): MalicePickUi? {
                 level = level,
                 tiles = availableTiles.filter { it.niveau == level }.map { it.toUi() },
                 ownedTiles = human.tiles.map { it.toUi() },
+                tiers = GameEngine.MALICE_TIERS,
             )
         }
 }
@@ -65,6 +67,17 @@ private fun GameState.toBotTurnUi(explanation: String?): BotTurnUi? {
     }
     return BotTurnUi(decision.monster.displayName, text)
 }
+
+private fun GameState.phaseLabel(): String =
+    if (pendingMaliceLevels.isNotEmpty()) "Choisir un pouvoir de Surcharge" else when (phase) {
+        TurnPhase.LANCER -> "Lancer les dés"
+        TurnPhase.RESOUDRE -> "Résoudre les résultats"
+        TurnPhase.DECISION_FUITE -> "Fuir ou rester dans la Tour"
+        TurnPhase.ENTRER -> "Entrer dans la Tour"
+        TurnPhase.ACHETER -> "Acheter des cartes ou finir le tour"
+        TurnPhase.FIN_TOUR -> "Fin du tour"
+        TurnPhase.FIN_PARTIE -> "Partie terminée"
+    }
 
 internal fun GameState.toHomeUiState(version: String) = HomeUiState(
     canResume = phase != TurnPhase.FIN_PARTIE,
@@ -108,8 +121,10 @@ internal fun GameState.toGameUiState(
         opponents = players.filter { it.isBot }.map { it.toUi(this) },
         tokyoOccupant = players.firstOrNull { it.id == tokyoOccupantId }?.toUi(this),
         activePlayerName = activePlayer.monster.displayName,
-        phase = phase,
-        isChoosingPower = pendingMaliceLevels.isNotEmpty(),
+        phaseLabel = phaseLabel(),
+        isRolling = phase == TurnPhase.LANCER,
+        isBuyPhase = phase == TurnPhase.ACHETER,
+        maliceTiers = GameEngine.MALICE_TIERS,
         dice = dice.map { die ->
             DieUi(die.id, die.face, die.isKept, canToggle = GameAction.ToggleKeep(die.id) in legal)
         },
@@ -139,17 +154,21 @@ internal fun GameState.toShopUiState(): ShopUiState {
         isBotTurn = decisionPlayer.isBot,
         energy = buyer.energy,
         cards = shop.map { card ->
+            val cost = EffectInterpreter.computeCardCost(this, buyer.id, card)
             ShopCardUi(
                 id = card.id,
                 name = card.nom,
                 type = card.type,
                 text = card.texte,
-                cost = EffectInterpreter.computeCardCost(this, buyer.id, card),
+                cost = cost,
                 baseCost = card.cout,
+                energyAfterPurchase = buyer.energy - cost,
                 canBuy = GameAction.BuyCard(card.id) in legal,
             )
         },
         canSweep = GameAction.SweepShop in legal,
+        sweepCost = GameEngine.SWEEP_COST,
+        energyAfterSweep = buyer.energy - GameEngine.SWEEP_COST,
         revision = actionHistory.size,
         lastReceipt = lastMarketReceipts[buyer.id]?.let { receipt ->
             val effect = when {

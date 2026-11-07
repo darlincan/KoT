@@ -50,21 +50,23 @@ fun GameScreenPortrait(
         PlayerCardSelf(player = me)
 
         // Middle: Central Tower
+        Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
                 .weight(1f)
+                .fillMaxHeight()
                 .background(NeonPalette.Surface, RoundedCornerShape(12.dp))
                 .border(2.dp, NeonPalette.NeonCyan, RoundedCornerShape(12.dp))
                 .padding(12.dp),
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("LA TOUR CENTRALE", color = NeonPalette.NeonCyan, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+                Text("LA TOUR CENTRALE", color = NeonPalette.NeonCyan, fontFamily = OrbitronFamily, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
                 Spacer(Modifier.height(8.dp))
                 if (occupant != null) {
-                    Text("👑 ${occupant.name}", color = NeonPalette.NeonPink, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    Text("👑 ${occupant.name}", color = NeonPalette.NeonPink, fontFamily = OrbitronFamily, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     Text("♥ ${occupant.hp}/10   ★ ${occupant.vp}/20", color = NeonPalette.TextPrimary, fontSize = 14.sp)
+                    Text("+2 ★ au début de son tour", color = NeonPalette.TextPrimary, fontSize = 12.sp)
                 } else {
                     Text("ZONE LIBRE (+1 ★ à l'entrée)", color = NeonPalette.TextPrimary.copy(alpha = 0.7f), fontSize = 14.sp)
                 }
@@ -86,8 +88,8 @@ fun GameScreenPortrait(
                 }
             }
         }
-        
-        SurchargeGaugeBar(malice = me.malice)
+        SurchargeGaugeBar(malice = me.malice, tiers = state.maliceTiers, modifier = Modifier.fillMaxHeight())
+        }
 
         DiceTurnControls(state, onEvent, setTooltipMessage)
     }

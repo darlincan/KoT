@@ -7,6 +7,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.unit.sp
 import com.neonkaiju.kot.model.*
 
@@ -17,6 +18,7 @@ private fun SymbolResolutionType.label() = when (this) {
     SymbolResolutionType.CLAWS -> "Griffes"
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DiceTurnControls(state: GameUiState, onEvent: (UiEvent) -> Unit, onTooltip: (String?) -> Unit) {
     var choosingOrder by remember { mutableStateOf(false) }
@@ -28,8 +30,8 @@ fun DiceTurnControls(state: GameUiState, onEvent: (UiEvent) -> Unit, onTooltip: 
             else -> "${state.rollsLeft} lancers restants"
         }
         Text("Lancer ${state.rollsMade}/${state.maxRolls} — $remaining", color = NeonPalette.NeonCyan, fontSize = 12.sp, lineHeight = 14.sp)
-        Text(if (state.rollsMade == 1) "Premier lancer automatique. Touchez les dés pour les conserver ou les relancer."
-            else "Touchez les dés pour les conserver ou les relancer.", color = NeonPalette.TextPrimary, fontSize = 11.sp, lineHeight = 13.sp)
+        Text(if (state.rollsMade == 1) "Premier lancer automatique. Touchez un dé pour le verrouiller."
+            else "Touchez un dé pour le verrouiller.", color = NeonPalette.TextPrimary, fontSize = 11.sp, lineHeight = 13.sp)
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             state.dice.chunked(3).forEach { row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -49,17 +51,17 @@ fun DiceTurnControls(state: GameUiState, onEvent: (UiEvent) -> Unit, onTooltip: 
                 choosingOrder = true
             }
         )
-        if (state.phase == TurnPhase.LANCER) {
-            NeonButton("Relancer les dés non conservés", enabled = state.reroll.enabled,
+        if (state.isRolling) {
+            NeonButton("Relancer", enabled = state.reroll.enabled, accentColor = NeonPalette.NeonCyan,
                 disabledReason = state.reroll.blockedReason?.label(),
                 onDisabledLongPress = { onTooltip(it) }, modifier = Modifier.fillMaxWidth(),
                 onClick = { onEvent(UiEvent.DispatchGameAction(GameAction.Reroll)) })
-            NeonButton("Terminer les lancers et résoudre", enabled = state.stopRolling.enabled,
-                accentColor = NeonPalette.NeonCyan, disabledReason = state.stopRolling.blockedReason?.label(),
+            NeonButton("Résoudre", enabled = state.stopRolling.enabled,
+                disabledReason = state.stopRolling.blockedReason?.label(),
                 onDisabledLongPress = { onTooltip(it) }, modifier = Modifier.fillMaxWidth(),
                 onClick = { onEvent(UiEvent.DispatchGameAction(GameAction.StopRolling)) })
         } else {
-            Text(if (state.phase == TurnPhase.ACHETER) "Dés résolus. Achetez des cartes ou terminez le tour."
+            Text(if (state.isBuyPhase) "Dés résolus. Achetez des cartes ou terminez le tour."
                 else "Décision en cours…", color = NeonPalette.TextPrimary, fontSize = 12.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 NeonButton("Marché noir", enabled = state.openShop.enabled, disabledReason = state.openShop.blockedReason?.label(),
@@ -73,15 +75,20 @@ fun DiceTurnControls(state: GameUiState, onEvent: (UiEvent) -> Unit, onTooltip: 
     }
     if (choosingOrder) {
         AlertDialog(onDismissRequest = { choosingOrder = false },
+            // Plus large que le défaut : les 4 catégories tiennent sur une ligne en paysage.
+            modifier = Modifier.fillMaxWidth(0.9f),
+            properties = DialogProperties(usePlatformDefaultWidth = false),
             title = { Text("Ordre de résolution automatique") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("Choisissez les quatre catégories dans l’ordre souhaité.")
                     Text(order.joinToString(" → ") { it.label() })
-                    SymbolResolutionType.entries.filter { it !in order }.forEach { symbol ->
-                        NeonButton(symbol.label(), onClick = { order = order + symbol })
+                    // Sur une seule ligne si la place le permet : en paysage, la fenêtre est peu haute.
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        SymbolResolutionType.entries.filter { it !in order }.forEach { symbol ->
+                            NeonButton(symbol.label(), onClick = { order = order + symbol })
+                        }
                     }
-                    NeonButton("Recommencer", onClick = { order = emptyList() })
                 }
             },
             confirmButton = {
@@ -89,6 +96,9 @@ fun DiceTurnControls(state: GameUiState, onEvent: (UiEvent) -> Unit, onTooltip: 
                     onEvent(UiEvent.DispatchGameAction(GameAction.SetResolutionOrder(order)))
                     choosingOrder = false
                 })
+            },
+            dismissButton = {
+                NeonButton("Recommencer", accentColor = NeonPalette.NeonCyan, onClick = { order = emptyList() })
             })
     }
 }
