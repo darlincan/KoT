@@ -145,7 +145,7 @@ private fun RulesTab(title: String, isSelected: Boolean, modifier: Modifier, onC
 }
 
 @Composable
-fun SettingsScreen(state: SettingsUiState, onToggleFastBot: () -> Unit, onBack: () -> Unit) {
+fun SettingsScreen(state: SettingsUiState, onToggleFastBot: () -> Unit, onToggleFleeCountdown: () -> Unit, onBack: () -> Unit) {
     val fastBot = state.fastBots
     Column(
         modifier = Modifier
@@ -161,6 +161,12 @@ fun SettingsScreen(state: SettingsUiState, onToggleFastBot: () -> Unit, onBack: 
             description = "Raccourcit la pause entre les actions des bots.",
             checked = fastBot,
             onToggle = onToggleFastBot
+        )
+        SettingSwitchRow(
+            title = "Compte à rebours Fuir ou Rester",
+            description = "$FLEE_COUNTDOWN_SECONDS s pour décider ; sans réponse, vous restez dans la Tour. Ignoré quand TalkBack est actif.",
+            checked = state.fleeCountdown,
+            onToggle = onToggleFleeCountdown
         )
         Spacer(Modifier.weight(1f))
         NeonButton("Retour", onClick = onBack, modifier = Modifier.fillMaxWidth())

@@ -52,6 +52,7 @@ class GameViewModelTest {
         private val state = MutableStateFlow(Settings())
         override val settings: Flow<Settings> = state
         override suspend fun setFastBots(enabled: Boolean) { state.value = state.value.copy(fastBots = enabled) }
+        override suspend fun setFleeCountdown(enabled: Boolean) { state.value = state.value.copy(fleeCountdown = enabled) }
     }
 
     @BeforeEach
@@ -159,6 +160,20 @@ class GameViewModelTest {
         val explanation = viewModel.gameUiState.value?.botTurn?.lastAction
         assertFalse(explanation.isNullOrBlank())
         job.cancel()
+    }
+
+    @Test
+    fun `flee countdown setting reaches the game screen state`() = runTest(dispatcher) {
+        val settings = InMemorySettingsRepository()
+        val viewModel = viewModel(InMemoryGameRepository(newGame()), settings)
+        backgroundScope.launch { viewModel.gameUiState.collect {} }
+        runCurrent()
+        assertEquals(false, viewModel.gameUiState.value?.countdownEnabled)
+
+        settings.setFleeCountdown(true)
+        runCurrent()
+
+        assertEquals(true, viewModel.gameUiState.value?.countdownEnabled)
     }
 
     @Test

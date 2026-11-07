@@ -131,6 +131,24 @@ class GameUiMapperTest {
     }
 
     @Test
+    fun `player and shop card labels say in words what the symbols show`() {
+        val ui = game.copy(tokyoOccupantId = game.players[1].id).toGameUiState(false)
+
+        val label = ui.opponents.first { it.id == game.players[1].id }.accessibilityLabel
+        assertEquals("${game.players[1].monster.displayName}, 10 points de vie, 0 étoile, 0 Cellule, Surcharge 0, dans la Tour", label)
+
+        val card = game.copy(phase = TurnPhase.ACHETER).toShopUiState().cards.first()
+        assertTrue(card.accessibilityLabel.startsWith("${card.name}, "))
+        assertTrue(card.accessibilityLabel.contains("prix ${card.cost}"))
+    }
+
+    @Test
+    fun `countdown stays off unless the setting enables it`() {
+        assertFalse(game.toGameUiState(false).countdownEnabled)
+        assertTrue(game.toGameUiState(false, countdownEnabled = true).countdownEnabled)
+    }
+
+    @Test
     fun `human commands stay blocked while a bot decides`() {
         val ui = game.copy(activePlayerIndex = 1).toGameUiState(isBotFastForward = false, botExplanation = "garde un dé")
 

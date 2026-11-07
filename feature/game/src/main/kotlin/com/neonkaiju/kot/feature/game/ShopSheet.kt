@@ -8,6 +8,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.neonkaiju.kot.model.*
@@ -31,6 +33,7 @@ fun ShopSheet(state: ShopUiState, onBuy: (String, Int) -> Unit, onSweep: (Int) -
             state.cards.forEach { card ->
                 val selectedCard = card.id == selectedId
                 Column(Modifier.weight(1f).fillMaxHeight()
+                    .semantics { contentDescription = card.accessibilityLabel }
                     .background(NeonPalette.Surface, RoundedCornerShape(10.dp))
                     .border(if (selectedCard) 3.dp else 1.dp, if (selectedCard) NeonPalette.NeonPink else NeonPalette.NeonCyan, RoundedCornerShape(10.dp))
                     .padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
