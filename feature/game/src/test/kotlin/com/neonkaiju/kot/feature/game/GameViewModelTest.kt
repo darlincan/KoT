@@ -1,6 +1,7 @@
 package com.neonkaiju.kot.feature.game
 
 import androidx.lifecycle.SavedStateHandle
+import com.neonkaiju.kot.ai.BotTurnPresenter
 import com.neonkaiju.kot.ai.HeuristicBotPolicy
 import com.neonkaiju.kot.content.CatalogData
 import com.neonkaiju.kot.content.CatalogLoader
@@ -17,6 +18,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -100,8 +102,9 @@ class GameViewModelTest {
         advanceTimeBy(5_000)
         assertEquals(botTurn, viewModel.game.value, "aucun bot ne joue écran caché")
 
+        val delay = BotTurnPresenter().delayMillis(HeuristicBotPolicy().chooseAction(botTurn), fast = false)
         viewModel.setBotsActive(true)
-        advanceTimeBy(GameViewModel.BOT_DELAY_MS - 1)
+        advanceTimeBy(delay - 1)
         assertEquals(botTurn, viewModel.game.value, "l'action du bot reste visible au moins le délai prévu")
 
         advanceTimeBy(2)
@@ -118,9 +121,54 @@ class GameViewModelTest {
         runCurrent()
         assertTrue(settings.settings.first().fastBots)
 
+        val delay = BotTurnPresenter().delayMillis(HeuristicBotPolicy().chooseAction(botTurn), fast = true)
         viewModel.setBotsActive(true)
-        advanceTimeBy(GameViewModel.FAST_BOT_DELAY_MS + 1)
+        advanceTimeBy(delay + 1)
         assertNotEquals(botTurn, viewModel.game.value)
+    }
+
+    @Test
+    fun `human action is ignored while a bot decides`() = runTest(dispatcher) {
+        val botTurn = newGame().copy(activePlayerIndex = 1)
+        val viewModel = viewModel(InMemoryGameRepository(botTurn))
+
+        viewModel.dispatch(GameAction.StopRolling)
+
+        assertEquals(botTurn, viewModel.game.value)
+    }
+
+    @Test
+    fun `action confirmed on an older state is ignored`() = runTest(dispatcher) {
+        val game = newGame()
+        val viewModel = viewModel(InMemoryGameRepository(game))
+
+        viewModel.dispatch(GameAction.StopRolling, expectedRevision = game.actionHistory.size + 1)
+        assertEquals(game, viewModel.game.value)
+
+        viewModel.dispatch(GameAction.StopRolling, expectedRevision = game.actionHistory.size)
+        assertNotEquals(game, viewModel.game.value)
+    }
+
+    @Test
+    fun `old save is migrated when it is restored`() = runTest(dispatcher) {
+        val old = newGame().copy(version = 1, maxRolls = 4, rollsLeft = 3)
+
+        val viewModel = viewModel(InMemoryGameRepository(old))
+
+        val restored = viewModel.game.value!!
+        assertEquals(listOf(2, 3, 2), listOf(restored.version, restored.maxRolls, restored.rollsLeft))
+    }
+
+    @Test
+    fun `game screen state explains what the bot is doing`() = runTest(dispatcher) {
+        val botTurn = newGame().copy(activePlayerIndex = 1)
+        val viewModel = viewModel(InMemoryGameRepository(botTurn))
+        val job = backgroundScope.launch { viewModel.gameUiState.collect {} }
+        runCurrent()
+
+        val explanation = viewModel.gameUiState.value?.botTurn?.lastAction
+        assertFalse(explanation.isNullOrBlank())
+        job.cancel()
     }
 
     @Test

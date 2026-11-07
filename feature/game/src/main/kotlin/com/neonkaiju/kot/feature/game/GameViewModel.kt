@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.neonkaiju.kot.ai.BotPolicy
+import com.neonkaiju.kot.ai.BotTurnPresenter
 import com.neonkaiju.kot.data.CatalogRepository
 import com.neonkaiju.kot.data.GameRepository
 import com.neonkaiju.kot.data.SettingsRepository
@@ -18,7 +19,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import javax.inject.Named
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -68,6 +68,7 @@ class GameViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     private val botsActive = MutableStateFlow(false)
+    private val botPresenter = BotTurnPresenter(botPolicy)
 
     private val _effects = Channel<GameEffect>(Channel.BUFFERED)
     val effects: Flow<GameEffect> = _effects.receiveAsFlow()
@@ -81,7 +82,9 @@ class GameViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), MonsterPickerUiState(selected = selectedMonster.value))
 
     /** a une valeur egale a null tant qu'aucune partie n'est start. */
-    val gameUiState: StateFlow<GameUiState?> = combine(_game, fastBots) { game, fast -> game?.toGameUiState(fast) }
+    val gameUiState: StateFlow<GameUiState?> = combine(_game, fastBots) { game, fast ->
+        game?.toGameUiState(fast, game.botExplanation())
+    }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
 
     val shopUiState: StateFlow<ShopUiState?> = _game
@@ -94,7 +97,7 @@ class GameViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val saved = gameRepository.load()
+            val saved = gameRepository.load()?.migrated()
             _game.compareAndSet(null, saved)
             _isLoaded.value = true
         }
@@ -117,8 +120,14 @@ class GameViewModel @Inject constructor(
         }
     }
 
-    fun dispatch(action: GameAction) {
+    /**
+     * Action du joueur humain. Elle est ignorée pendant la décision d'un bot, et aussi quand
+     * [expectedRevision] ne correspond plus à la partie : un double appui ne paie pas deux fois.
+     */
+    fun dispatch(action: GameAction, expectedRevision: Int? = null) {
         val current = _game.value ?: return
+        if (current.decisionPlayer.isBot) return
+        if (expectedRevision != null && current.actionHistory.size != expectedRevision) return
         apply(current, action)
     }
 
@@ -135,8 +144,8 @@ class GameViewModel @Inject constructor(
         combine(_game, botsActive, fastBots, ::Triple).collectLatest { (state, active, fast) ->
             if (state == null || !active || !state.awaitsBot()) return@collectLatest
             // rule transverse 1 : chaque action de bot reste visible au moins 400 ms.
-            delay(if (fast) FAST_BOT_DELAY_MS else BOT_DELAY_MS)
-            apply(state, botPolicy.chooseAction(state))
+            val action = botPresenter.nextAction(state, fast) { true } ?: return@collectLatest
+            apply(state, action)
         }
     }
 
@@ -149,6 +158,9 @@ class GameViewModel @Inject constructor(
         update(next)
     }
 
+    private fun GameState.botExplanation(): String? =
+        if (awaitsBot()) botPolicy.explainAction(this, botPolicy.chooseAction(this)) else null
+
     private fun update(state: GameState) {
         _game.value = state
         val isOver = state.phase == TurnPhase.FIN_PARTIE
@@ -160,16 +172,14 @@ class GameViewModel @Inject constructor(
 
     companion object {
         const val APP_VERSION = "appVersion"
-        const val BOT_DELAY_MS = 650L
-        const val FAST_BOT_DELAY_MS = 400L
         private const val STOP_TIMEOUT_MS = 5_000L
         private const val KEY_SELECTED_MONSTER = "selected_monster"
     }
 }
 
 /** Vrai quand la prochaine décision revient à un bot, y compris Fuir ou Rester pour un bot dans la Tour. */
-internal fun GameState.awaitsBot(): Boolean = when (phase) {
-    TurnPhase.FIN_PARTIE -> false
-    TurnPhase.DECISION_FUITE -> players.first { it.id == pendingFlee?.occupantId }.isBot
-    else -> activePlayer.isBot
-}
+internal fun GameState.awaitsBot(): Boolean = phase != TurnPhase.FIN_PARTIE && decisionPlayer.isBot
+
+/** Remet une ancienne sauvegarde aux règles actuelles et termine la résolution automatique en attente. */
+private fun GameState.migrated(): GameState =
+    GameEngine.advanceAutomatically(copy(version = 2, maxRolls = 3, rollsLeft = rollsLeft.coerceIn(0, 2)))

@@ -1,5 +1,6 @@
 package com.neonkaiju.kot.navigation
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -23,6 +24,7 @@ sealed interface Route {
     @Serializable data object GameOver : Route
     @Serializable data object Rules : Route
     @Serializable data object Settings : Route
+    @Serializable data object Pause : Route
 }
 
 /**
@@ -83,6 +85,7 @@ fun KotNavHost(
             }
             val state by gameViewModel.gameUiState.collectAsStateWithLifecycle()
             RequireGame(gameViewModel, onMissing = { navController.backToHome() })
+            BackHandler { navController.navigate(Route.Pause) }
             state?.let {
                 GameScreen(
                     state = it,
@@ -91,6 +94,7 @@ fun KotNavHost(
                             is UiEvent.DispatchGameAction -> gameViewModel.dispatch(event.action)
                             UiEvent.OpenShop -> navController.navigate(Route.Shop)
                             UiEvent.ToggleFastBot -> gameViewModel.toggleFastBots()
+                            UiEvent.Pause -> navController.navigate(Route.Pause)
                             else -> Unit
                         }
                     }
@@ -101,11 +105,14 @@ fun KotNavHost(
         composable<Route.Shop> {
             val state by gameViewModel.shopUiState.collectAsStateWithLifecycle()
             RequireGame(gameViewModel, onMissing = { navController.backToHome() })
+            BackHandler { navController.navigate(Route.Pause) }
             state?.let {
+                // Le marché se ferme si la décision passe à un bot.
+                LaunchedEffect(it.isBotTurn) { if (it.isBotTurn) navController.popBackStack() }
                 ShopSheet(
                     state = it,
-                    onBuy = { cardId -> gameViewModel.dispatch(GameAction.BuyCard(cardId)) },
-                    onSweep = { gameViewModel.dispatch(GameAction.SweepShop) },
+                    onBuy = { cardId, revision -> gameViewModel.dispatch(GameAction.BuyCard(cardId), revision) },
+                    onSweep = { revision -> gameViewModel.dispatch(GameAction.SweepShop, revision) },
                     onClose = { navController.popBackStack() }
                 )
             }
@@ -121,6 +128,15 @@ fun KotNavHost(
                     onBackHome = { navController.backToHome() }
                 )
             }
+        }
+
+        composable<Route.Pause> {
+            PauseScreen(
+                onResume = { navController.popBackStack() },
+                // Chaque action est déjà sauvegardée par le ViewModel.
+                onSaveAndQuit = { navController.backToHome() },
+                onHome = { navController.backToHome() }
+            )
         }
 
         composable<Route.Rules> {

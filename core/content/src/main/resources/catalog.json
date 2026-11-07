@@ -37,8 +37,8 @@
       "nom": "Recalibrage optique",
       "cout": 4,
       "type": "POUVOIR",
-      "texte": "Gagnez 1 relance supplémentaire à chaque tour.",
-      "effets": [{ "declencheur": "AVANT_LANCER", "cible": "SOI", "operation": "rerollDice", "valeur": 1 }]
+      "texte": "Au premier lancer de votre tour, change un dé 1 en griffe.",
+      "effets": [{ "declencheur": "AVANT_LANCER", "cible": "SOI", "operation": "changerFace", "valeur": 1 }]
     },
     {
       "id": "piratage_neural",
@@ -124,7 +124,7 @@
       "cout": 4,
       "type": "POUVOIR",
       "texte": "Change un dé 1 en griffe lors de la résolution.",
-      "effets": [{ "declencheur": "APRES_RESOLUTION", "cible": "SOI", "operation": "changerFace", "valeur": 1 }]
+      "effets": [{ "declencheur": "AVANT_RESOLUTION", "cible": "SOI", "operation": "changerFace", "valeur": 1 }]
     },
     {
       "id": "balise_neon",
