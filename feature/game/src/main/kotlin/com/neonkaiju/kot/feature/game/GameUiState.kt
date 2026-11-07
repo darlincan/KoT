@@ -31,6 +31,15 @@ data class PlayerUi(
     val gains: ResolutionGains? = null,
 ) {
     val name: String get() = monster.displayName
+
+    /** Ce que TalkBack annonce pour cette fiche : la même information que les symboles affichés. */
+    val accessibilityLabel: String
+        get() = buildString {
+            append(name)
+            if (!isAlive) append(", éliminé")
+            append(", $hp ${if (hp > 1) "points" else "point"} de vie, $vp ${if (vp > 1) "étoiles" else "étoile"}, $energy ${if (energy > 1) "Cellules" else "Cellule"}, Surcharge $malice")
+            if (isInTokyo) append(", dans la Tour")
+        }
 }
 
 data class DieUi(
@@ -92,6 +101,7 @@ data class GameUiState(
     val flee: FleeUi?,
     val malicePick: MalicePickUi?,
     val isBotFastForward: Boolean,
+    val countdownEnabled: Boolean = false,
 )
 
 data class ShopCardUi(
@@ -103,7 +113,13 @@ data class ShopCardUi(
     val cost: Int,
     val baseCost: Int,
     val canBuy: Boolean,
-)
+) {
+    val accessibilityLabel: String
+        get() {
+            val kind = if (type == CardType.ACTION) "action" else "pouvoir"
+            return "$name, $kind, prix $cost ${if (cost > 1) "Cellules" else "Cellule"}, $text"
+        }
+}
 
 data class ShopUiState(
     val buyerId: Int,
