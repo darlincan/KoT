@@ -1,5 +1,7 @@
 package com.neonkaiju.kot.model
 
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -162,6 +164,7 @@ sealed interface GameAction {
     @Serializable data object EndTurn : GameAction
 }
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class MarketReceipt(
     val itemName: String,
@@ -186,9 +189,11 @@ data class ResolutionGains(
     val tokyoVp: Int = 0
 )
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class GameState(
-    val version: Int = 2,
+    // toujours écrit dans le json (sinon la valeur par défaut est omise) pour pouvoir migrer les sauvegardes.
+    @EncodeDefault val version: Int = CURRENT_VERSION,
     val rng: DeterministicRng,
     val players: List<PlayerState>,
     val activePlayerIndex: Int = 0,
@@ -217,4 +222,10 @@ data class GameState(
         else pendingFlee?.let { decision -> players.first { it.id == decision.occupantId } } ?: activePlayer
     val resolutionSummary: List<String> get() = actionLog.drop(resolutionLogStart)
     val activePlayer: PlayerState get() = players[activePlayerIndex]
+
+    companion object {
+        /** a incrémenter à chaque changement incompatible du format de sauvegarde. */
+        // v2 : RNG SplitMix64, ordre de résolution, maxRolls, reçus du marché, historique des actions.
+        const val CURRENT_VERSION = 2
+    }
 }

@@ -97,7 +97,7 @@ class GameViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val saved = gameRepository.load()?.migrated()
+            val saved = gameRepository.load()?.resumed()
             _game.compareAndSet(null, saved)
             _isLoaded.value = true
         }
@@ -180,6 +180,5 @@ class GameViewModel @Inject constructor(
 /** Vrai quand la prochaine décision revient à un bot, y compris Fuir ou Rester pour un bot dans la Tour. */
 internal fun GameState.awaitsBot(): Boolean = phase != TurnPhase.FIN_PARTIE && decisionPlayer.isBot
 
-/** Remet une ancienne sauvegarde aux règles actuelles et termine la résolution automatique en attente. */
-private fun GameState.migrated(): GameState =
-    GameEngine.advanceAutomatically(copy(version = 2, maxRolls = 3, rollsLeft = rollsLeft.coerceIn(0, 2)))
+/** Termine la résolution automatique en attente ; la migration du format est faite par le GameRepository. */
+private fun GameState.resumed(): GameState = GameEngine.advanceAutomatically(this)

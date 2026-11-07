@@ -150,16 +150,6 @@ class GameViewModelTest {
     }
 
     @Test
-    fun `old save is migrated when it is restored`() = runTest(dispatcher) {
-        val old = newGame().copy(version = 1, maxRolls = 4, rollsLeft = 3)
-
-        val viewModel = viewModel(InMemoryGameRepository(old))
-
-        val restored = viewModel.game.value!!
-        assertEquals(listOf(2, 3, 2), listOf(restored.version, restored.maxRolls, restored.rollsLeft))
-    }
-
-    @Test
     fun `game screen state explains what the bot is doing`() = runTest(dispatcher) {
         val botTurn = newGame().copy(activePlayerIndex = 1)
         val viewModel = viewModel(InMemoryGameRepository(botTurn))
