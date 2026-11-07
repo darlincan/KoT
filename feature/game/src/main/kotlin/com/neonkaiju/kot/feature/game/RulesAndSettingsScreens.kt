@@ -105,7 +105,7 @@ fun RulesScreen(onBack: () -> Unit) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("RÈGLES", color = NeonPalette.NeonCyan, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text("RÈGLES", color = NeonPalette.NeonCyan, fontFamily = OrbitronFamily, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             NeonButton("Retour", onClick = onBack, accentColor = NeonPalette.NeonCyan)
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -145,7 +145,7 @@ private fun RulesTab(title: String, isSelected: Boolean, modifier: Modifier, onC
 }
 
 @Composable
-fun SettingsScreen(state: SettingsUiState, onToggleFastBot: () -> Unit, onBack: () -> Unit) {
+fun SettingsScreen(state: SettingsUiState, onToggleFastBot: () -> Unit, onToggleFleeCountdown: () -> Unit, onBack: () -> Unit) {
     val fastBot = state.fastBots
     Column(
         modifier = Modifier
@@ -155,12 +155,18 @@ fun SettingsScreen(state: SettingsUiState, onToggleFastBot: () -> Unit, onBack: 
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("RÉGLAGES", color = NeonPalette.NeonCyan, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text("RÉGLAGES", color = NeonPalette.NeonCyan, fontFamily = OrbitronFamily, fontSize = 22.sp, fontWeight = FontWeight.Bold)
         SettingSwitchRow(
             title = "Bots rapides",
             description = "Raccourcit la pause entre les actions des bots.",
             checked = fastBot,
             onToggle = onToggleFastBot
+        )
+        SettingSwitchRow(
+            title = "Compte à rebours Fuir ou Rester",
+            description = "$FLEE_COUNTDOWN_SECONDS s pour décider ; sans réponse, vous restez dans la Tour. Ignoré quand TalkBack est actif.",
+            checked = state.fleeCountdown,
+            onToggle = onToggleFleeCountdown
         )
         Spacer(Modifier.weight(1f))
         NeonButton("Retour", onClick = onBack, modifier = Modifier.fillMaxWidth())

@@ -72,6 +72,7 @@ fun KotNavHost(
                     when (event) {
                         is UiEvent.PickMonster -> gameViewModel.pickMonster(event.monster)
                         UiEvent.StartGame -> gameViewModel.startGame()
+                        UiEvent.BackHome -> navController.backToHome()
                         else -> Unit
                     }
                 }
@@ -149,6 +150,7 @@ fun KotNavHost(
             SettingsScreen(
                 state = state,
                 onToggleFastBot = settingsViewModel::toggleFastBots,
+                onToggleFleeCountdown = settingsViewModel::toggleFleeCountdown,
                 onBack = { navController.popBackStack() }
             )
         }

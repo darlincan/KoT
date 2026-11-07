@@ -2,6 +2,7 @@ package com.neonkaiju.kot.feature.game
 
 import com.neonkaiju.kot.content.CatalogLoader
 import com.neonkaiju.kot.engine.GameEngine
+import com.neonkaiju.kot.model.DieFace
 import com.neonkaiju.kot.model.MonsterId
 import com.neonkaiju.kot.model.PendingFleeDecision
 import com.neonkaiju.kot.model.TurnPhase
@@ -128,6 +129,88 @@ class GameUiMapperTest {
         assertEquals(FleeUi(attacker.monster.displayName, damageTaken = 2, remainingHp = human.hp), pending.flee)
         assertTrue(pending.me.isInTokyo)
         assertEquals(3, game.copy(pendingMaliceLevels = listOf(3)).toGameUiState(false).malicePick?.level)
+    }
+
+    @Test
+    fun `game screen state describes the phase without exposing it`() {
+        val rolling = game.toGameUiState(false)
+        assertTrue(rolling.isRolling)
+        assertFalse(rolling.isBuyPhase)
+        assertEquals("Lancer les dés", rolling.phaseLabel)
+        assertEquals(GameEngine.MALICE_TIERS, rolling.maliceTiers)
+
+        val buying = game.copy(phase = TurnPhase.ACHETER).toGameUiState(false)
+        assertTrue(buying.isBuyPhase)
+        assertFalse(buying.isRolling)
+
+        val choosing = game.copy(pendingMaliceLevels = listOf(3)).toGameUiState(false)
+        assertEquals("Choisir un pouvoir de Surcharge", choosing.phaseLabel)
+        assertEquals(GameEngine.MALICE_TIERS, choosing.malicePick?.tiers)
+    }
+
+    @Test
+    fun `bot overlay names the occupant when a bot decides to flee`() {
+        val human = game.players.first { !it.isBot }
+        val occupant = game.players[2]
+        val ui = game.copy(
+            phase = TurnPhase.DECISION_FUITE,
+            tokyoOccupantId = occupant.id,
+            pendingFlee = PendingFleeDecision(attackerId = human.id, occupantId = occupant.id, damageTaken = 1),
+        ).toGameUiState(false, botExplanation = "fuit la Tour")
+
+        assertEquals(BotTurnUi(occupant.monster.displayName, "fuit la Tour"), ui.botTurn)
+        assertNull(ui.flee)
+    }
+
+    @Test
+    fun `shop gives the remaining cells after each purchase and sweep`() {
+        val shop = game.copy(phase = TurnPhase.ACHETER, players = game.players.map { if (it.isBot) it else it.copy(energy = 5) }).toShopUiState()
+
+        shop.cards.forEach {
+            assertEquals(5 - it.cost, it.energyAfterPurchase)
+            assertEquals(it.cost, it.baseCost, "aucune réduction sans carte ni tuile")
+        }
+        assertEquals(GameEngine.SWEEP_COST, shop.sweepCost)
+        assertEquals(5 - GameEngine.SWEEP_COST, shop.energyAfterSweep)
+    }
+
+    @Test
+    fun `player and shop card labels say in words what the symbols show`() {
+        val ui = game.copy(tokyoOccupantId = game.players[1].id).toGameUiState(false)
+
+        val label = ui.opponents.first { it.id == game.players[1].id }.accessibilityLabel
+        assertEquals("${game.players[1].monster.displayName}, 10 points de vie, 0 étoile, 0 Cellule, Surcharge 0, dans la Tour", label)
+
+        val card = game.copy(phase = TurnPhase.ACHETER).toShopUiState().cards.first()
+        assertTrue(card.accessibilityLabel.startsWith("${card.name}, "))
+        assertTrue(card.accessibilityLabel.contains("prix ${card.cost}"))
+    }
+
+    @Test
+    fun `die label says the face and the lock in words`() {
+        assertEquals("Dé 2 : griffe, verrouillé", DieUi(1, DieFace.CLAW, isKept = true, canToggle = true).accessibilityLabel)
+        assertEquals("Dé 1 : chiffre 3, libre", DieUi(0, DieFace.THREE, isKept = false, canToggle = false).accessibilityLabel)
+    }
+
+    @Test
+    fun `player state gives the number of cards held`() {
+        val card = catalog.cards.first()
+        val ui = game.copy(players = game.players.map { if (it.isBot) it else it.copy(cards = listOf(card)) }).toGameUiState(false)
+
+        assertEquals(1, ui.me.cardCount)
+        assertEquals(0, ui.opponents.first().cardCount)
+    }
+
+    @Test
+    fun `finished game cannot be resumed`() {
+        assertTrue(game.toHomeUiState("1.0").canResume)
+        assertFalse(game.copy(phase = TurnPhase.FIN_PARTIE).toHomeUiState("1.0").canResume)
+    }
+
+    @Test
+    fun `countdown stays off unless the setting enables it`() {
+        assertFalse(game.toGameUiState(false).countdownEnabled)
+        assertTrue(game.toGameUiState(false, countdownEnabled = true).countdownEnabled)
     }
 
     @Test
