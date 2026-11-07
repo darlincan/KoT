@@ -9,6 +9,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -56,15 +57,27 @@ class FileGameRepository(
         }
     }
 
-    // fait monter le json d'une version à la suivante jusqu'à CURRENT_VERSION. Rien à migrer tant qu'on est en v1.
+    // fait monter le json d'une version à la suivante jusqu'à CURRENT_VERSION.
     private fun migrate(raw: JsonObject, from: Int): JsonObject {
         var current = raw
         for (version in from until GameState.CURRENT_VERSION) {
             current = when (version) {
+                1 -> migrateV1ToV2(current)
                 else -> error("migration manquante depuis la v$version")
             }
         }
         return current
+    }
+
+    /**
+     * v1 → v2 : les nouveaux champs ont tous une valeur par défaut ; on impose 3 lancers et on borne les relances
+     * à 2. Idempotente, car les sauvegardes v2 écrites avant @EncodeDefault n'ont pas non plus de version.
+     */
+    private fun migrateV1ToV2(raw: JsonObject): JsonObject {
+        val rollsLeft = (raw["rollsLeft"]?.jsonPrimitive?.int ?: 2).coerceIn(0, 2)
+        return JsonObject(
+            raw + mapOf("version" to JsonPrimitive(2), "maxRolls" to JsonPrimitive(3), "rollsLeft" to JsonPrimitive(rollsLeft))
+        )
     }
 
     override suspend fun save(state: GameState) = mutex.withLock {

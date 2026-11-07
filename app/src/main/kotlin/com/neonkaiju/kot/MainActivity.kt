@@ -1,7 +1,9 @@
 package com.neonkaiju.kot
 
 import android.os.Bundle
+import android.util.AtomicFile
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import com.neonkaiju.kot.feature.game.GameViewModel

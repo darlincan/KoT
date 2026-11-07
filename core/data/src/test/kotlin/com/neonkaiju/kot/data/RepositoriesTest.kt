@@ -106,6 +106,21 @@ class RepositoriesTest {
     }
 
     @Test
+    fun `v1 save is migrated to v2 with 3 rolls and bounded rerolls`() = runBlocking {
+        val repository = repository()
+        repository.save(newGame(ResourceCatalogRepository().catalog()))
+        val file = File(dir, "saved_game_v1.json")
+        val raw = Json.parseToJsonElement(file.readText()).jsonObject
+        file.writeText(JsonObject(raw + mapOf(
+            "version" to JsonPrimitive(1), "maxRolls" to JsonPrimitive(4), "rollsLeft" to JsonPrimitive(3)
+        )).toString())
+
+        val restored = repository.load()!!
+
+        assertEquals(listOf(2, 3, 2), listOf(restored.version, restored.maxRolls, restored.rollsLeft))
+    }
+
+    @Test
     fun `catalog is loaded only once`() = runBlocking {
         var loads = 0
         val repository = ResourceCatalogRepository(Dispatchers.Unconfined) {
