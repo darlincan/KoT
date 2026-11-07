@@ -310,10 +310,12 @@ fun GameScreen(
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
+                    .heightIn(min = 48.dp)
                     .background(NeonPalette.Surface, RoundedCornerShape(8.dp))
                     .border(1.dp, NeonPalette.NeonPink, RoundedCornerShape(8.dp))
                     .clickable { tooltipMessage = null }
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center
             ) {
                 Text(msg, color = NeonPalette.TextPrimary, fontSize = 13.sp)
             }
