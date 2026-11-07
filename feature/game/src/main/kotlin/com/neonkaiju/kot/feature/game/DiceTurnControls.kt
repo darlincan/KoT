@@ -8,7 +8,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.neonkaiju.kot.engine.GameEngine
 import com.neonkaiju.kot.model.*
 
 private fun SymbolResolutionType.label() = when (this) {
@@ -19,8 +18,7 @@ private fun SymbolResolutionType.label() = when (this) {
 }
 
 @Composable
-fun DiceTurnControls(state: GameState, onEvent: (UiEvent) -> Unit, onTooltip: (String?) -> Unit) {
-    val legal = if (state.decisionPlayer.isBot) emptyList() else GameEngine.legalActions(state)
+fun DiceTurnControls(state: GameUiState, onEvent: (UiEvent) -> Unit, onTooltip: (String?) -> Unit) {
     var choosingOrder by remember { mutableStateOf(false) }
     var order by remember { mutableStateOf<List<SymbolResolutionType>>(emptyList()) }
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -36,7 +34,7 @@ fun DiceTurnControls(state: GameState, onEvent: (UiEvent) -> Unit, onTooltip: (S
             state.dice.chunked(3).forEach { row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     row.forEach { die ->
-                        NeonDieView(die, GameAction.ToggleKeep(die.id) in legal, Modifier.weight(1f)) {
+                        NeonDieView(die, Modifier.weight(1f)) {
                             onEvent(UiEvent.DispatchGameAction(GameAction.ToggleKeep(die.id)))
                         }
                     }
@@ -46,26 +44,29 @@ fun DiceTurnControls(state: GameState, onEvent: (UiEvent) -> Unit, onTooltip: (S
         Text(
             "Ordre : ${state.resolutionOrder.joinToString(" → ") { it.label() }} · Modifier",
             color = NeonPalette.NeonCyan, fontSize = 10.sp, lineHeight = 12.sp,
-            modifier = Modifier.heightIn(min = 48.dp).clickable(enabled = state.phase == TurnPhase.LANCER && !state.decisionPlayer.isBot && state.pendingMaliceLevels.isEmpty()) {
+            modifier = Modifier.heightIn(min = 48.dp).clickable(enabled = state.canChangeOrder) {
                 order = emptyList()
                 choosingOrder = true
             }
         )
         if (state.phase == TurnPhase.LANCER) {
-            NeonButton("Relancer les dés non conservés", enabled = GameAction.Reroll in legal,
-                disabledReason = if (state.decisionPlayer.isBot) "Le bot joue" else "Tous les dés sont conservés : terminez les lancers",
+            NeonButton("Relancer les dés non conservés", enabled = state.reroll.enabled,
+                disabledReason = state.reroll.blockedReason?.label(),
                 onDisabledLongPress = { onTooltip(it) }, modifier = Modifier.fillMaxWidth(),
                 onClick = { onEvent(UiEvent.DispatchGameAction(GameAction.Reroll)) })
-            NeonButton("Terminer les lancers et résoudre", enabled = GameAction.StopRolling in legal,
-                accentColor = NeonPalette.NeonCyan, modifier = Modifier.fillMaxWidth(),
+            NeonButton("Terminer les lancers et résoudre", enabled = state.stopRolling.enabled,
+                accentColor = NeonPalette.NeonCyan, disabledReason = state.stopRolling.blockedReason?.label(),
+                onDisabledLongPress = { onTooltip(it) }, modifier = Modifier.fillMaxWidth(),
                 onClick = { onEvent(UiEvent.DispatchGameAction(GameAction.StopRolling)) })
         } else {
             Text(if (state.phase == TurnPhase.ACHETER) "Dés résolus. Achetez des cartes ou terminez le tour."
                 else "Décision en cours…", color = NeonPalette.TextPrimary, fontSize = 12.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                NeonButton("Marché noir", enabled = GameAction.EndTurn in legal, modifier = Modifier.weight(1f),
+                NeonButton("Marché noir", enabled = state.openShop.enabled, disabledReason = state.openShop.blockedReason?.label(),
+                    onDisabledLongPress = { onTooltip(it) }, modifier = Modifier.weight(1f),
                     onClick = { onEvent(UiEvent.OpenShop) })
-                NeonButton("Fin du tour", enabled = GameAction.EndTurn in legal, modifier = Modifier.weight(1f),
+                NeonButton("Fin du tour", enabled = state.endTurn.enabled, disabledReason = state.endTurn.blockedReason?.label(),
+                    onDisabledLongPress = { onTooltip(it) }, modifier = Modifier.weight(1f),
                     onClick = { onEvent(UiEvent.DispatchGameAction(GameAction.EndTurn)) })
             }
         }

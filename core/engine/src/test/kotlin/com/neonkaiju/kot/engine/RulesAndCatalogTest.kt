@@ -229,4 +229,38 @@ class RulesAndCatalogTest {
         val triggered = EffectInterpreter.applyTrigger(player(game()) { it.copy(cards = listOf(recalibrage)) }, EffectTrigger.AVANT_LANCER, 0)
         assertEquals(2, triggered.rollsLeft); assertEquals(3, triggered.maxRolls)
     }
+
+    @Test
+    fun `RULE_24_elimination_discards_cards_and_frees_tokyo`() {
+        var state = GameEngine.createGame(42L, MonsterId.VOLTRAX, catalog)
+        
+        // Put player 1 (bot) in Tokyo
+        state = state.copy(tokyoOccupantId = 1)
+        
+        // Give player 1 some cards and energy
+        val card = catalog.cards.first { it.id == "coeur_nucleaire" }
+        state = state.copy(players = state.players.map { 
+            if (it.id == 1) it.copy(hp = 2, energy = 5, cards = listOf(card)) else it
+        })
+        
+        // Player 0 rolls 2 claws
+        state = state.copy(dice = listOf(Die(0, DieFace.CLAW), Die(1, DieFace.CLAW), Die(2, DieFace.ONE), Die(3, DieFace.ONE), Die(4, DieFace.ENERGY), Die(5, DieFace.ENERGY)))
+        // La résolution des dés est automatique.
+        state = GameEngine.reduce(state, GameAction.StopRolling)
+        
+        // Player 1 should be eliminated, Tokyo free, cards discarded
+        val p1 = state.players[1]
+        assertFalse(p1.isAlive)
+        assertEquals(0, p1.hp)
+        assertEquals(0, p1.energy)
+        assertEquals(0, p1.cards.size)
+        // La Tour libérée revient aussitôt à l'attaquant.
+        assertEquals(0, state.tokyoOccupantId)
+        
+        // Discard pile should contain the card
+        assertTrue(state.discard.contains(card))
+        
+        // Action log should contain the elimination message
+        assertTrue(state.actionLog.any { it.contains("élimine") })
+    }
 }

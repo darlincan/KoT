@@ -206,12 +206,14 @@ object EffectInterpreter {
         val victim = state.players.first { it.id == victimId }
         if (!victim.isAlive) return state
         var updatedOccupant = state.tokyoOccupantId
+        var discardedCards = emptyList<CardDef>()
         val newPlayers = state.players.map { p ->
             if (p.id != victimId || !p.isAlive) p
             else {
                 val newHp = (p.hp - amount).coerceAtLeast(0)
                 if (newHp == 0) {
                     if (updatedOccupant == p.id) updatedOccupant = null
+                    discardedCards = discardedCards + p.cards
                     p.copy(
                         hp = 0,
                         isAlive = false,
@@ -229,7 +231,7 @@ object EffectInterpreter {
         return state.copy(
             players = newPlayers,
             tokyoOccupantId = updatedOccupant,
-            discard = state.discard + if (!after.isAlive) victim.cards else emptyList(),
+            discard = state.discard + discardedCards,
             actionLog = state.actionLog + "${victim.monster.displayName} subit ${victim.hp - after.hp} dégât(s) : ${after.hp} ♥${if (!after.isAlive) " — éliminé" else ""}"
         )
     }
