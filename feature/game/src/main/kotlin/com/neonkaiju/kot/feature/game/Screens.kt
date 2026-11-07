@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -50,80 +51,72 @@ fun HomeScreen(
     state: HomeUiState,
     onEvent: (UiEvent) -> Unit
 ) {
-    val canResume = state.canResume
-    val version = state.version
     val isPortrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
+    val frame = Modifier
+        .fillMaxSize()
+        .background(NeonPalette.Background)
+        .systemBarsPadding()
+        .padding(24.dp)
 
     if (isPortrait) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(NeonPalette.Background)
-                .padding(24.dp),
+            modifier = frame,
             verticalArrangement = Arrangement.SpaceEvenly,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("NÉON KAIJU", color = NeonPalette.NeonCyan, fontSize = 36.sp, fontWeight = FontWeight.ExtraBold)
-                Text("LA TOUR CENTRALE VOUS ATTEND", color = NeonPalette.TextPrimary, fontSize = 16.sp)
-                Spacer(Modifier.height(16.dp))
-                Text("Version $version • Édition Sombre", color = NeonPalette.NeonPink, fontSize = 12.sp)
-            }
-            Column(
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                NeonButton("Nouvelle Partie", onClick = { onEvent(UiEvent.NewGame) }, modifier = Modifier.fillMaxWidth(0.8f))
-                NeonButton(
-                    "Reprendre",
-                    onClick = { onEvent(UiEvent.Resume) },
-                    enabled = canResume,
-                    accentColor = NeonPalette.NeonCyan,
-                    disabledReason = "Aucune partie sauvegardée en cours",
-                    modifier = Modifier.fillMaxWidth(0.8f)
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth(0.8f)) {
-                    NeonButton("Règles", onClick = { onEvent(UiEvent.OpenRules) }, modifier = Modifier.weight(1f), accentColor = NeonPalette.NeonCyan)
-                    NeonButton("Réglages", onClick = { onEvent(UiEvent.OpenSettings) }, modifier = Modifier.weight(1f), accentColor = NeonPalette.NeonCyan)
-                }
-            }
+            HomeIllustration(Modifier.fillMaxWidth().weight(1f))
+            HomeTitle(state.version, Alignment.CenterHorizontally)
+            HomeActions(state.canResume, onEvent, Modifier.fillMaxWidth(0.8f))
         }
     } else {
         Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(NeonPalette.Background)
-                .systemBarsPadding()
-                .padding(24.dp),
+            modifier = frame,
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text("NÉON KAIJU", color = NeonPalette.NeonCyan, fontSize = 36.sp, fontWeight = FontWeight.ExtraBold)
-                Text("LA TOUR CENTRALE VOUS ATTEND", color = NeonPalette.TextPrimary, fontSize = 16.sp)
-                Spacer(Modifier.height(16.dp))
-                Text("Version $version • Édition Sombre", color = NeonPalette.NeonPink, fontSize = 12.sp)
+            HomeIllustration(Modifier.weight(1.2f).fillMaxHeight())
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                HomeTitle(state.version, Alignment.Start)
+                HomeActions(state.canResume, onEvent, Modifier.fillMaxWidth())
             }
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                horizontalAlignment = Alignment.End
-            ) {
-                NeonButton("Nouvelle Partie", onClick = { onEvent(UiEvent.NewGame) }, modifier = Modifier.fillMaxWidth(0.8f))
-                NeonButton(
-                    "Reprendre",
-                    onClick = { onEvent(UiEvent.Resume) },
-                    enabled = canResume,
-                    accentColor = NeonPalette.NeonCyan,
-                    disabledReason = "Aucune partie sauvegardée en cours",
-                    modifier = Modifier.fillMaxWidth(0.8f)
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth(0.8f)) {
-                    NeonButton("Règles", onClick = { onEvent(UiEvent.OpenRules) }, modifier = Modifier.weight(1f), accentColor = NeonPalette.NeonCyan)
-                    NeonButton("Réglages", onClick = { onEvent(UiEvent.OpenSettings) }, modifier = Modifier.weight(1f), accentColor = NeonPalette.NeonCyan)
-                }
-            }
+        }
+    }
+}
+
+@Composable
+private fun HomeTitle(version: String, alignment: Alignment.Horizontal) {
+    Column(horizontalAlignment = alignment) {
+        Text("LA GUERRE DES", color = NeonPalette.TextPrimary, fontSize = 16.sp)
+        Text("NÉON KAIJU", color = NeonPalette.NeonCyan, fontFamily = OrbitronFamily, fontSize = 32.sp, fontWeight = FontWeight.ExtraBold)
+        Spacer(Modifier.height(16.dp))
+        Text("Version $version • Édition Sombre", color = NeonPalette.NeonPink, fontSize = 12.sp)
+    }
+}
+
+@Composable
+private fun HomeActions(canResume: Boolean, onEvent: (UiEvent) -> Unit, modifier: Modifier) {
+    var tooltip by remember { mutableStateOf<String?>(null) }
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        NeonButton("Jouer", onClick = { onEvent(UiEvent.NewGame) }, modifier = Modifier.fillMaxWidth())
+        Text("Vous contre 3 monstres IA", color = NeonPalette.TextPrimary, fontSize = 11.sp)
+        NeonButton(
+            "Reprendre",
+            onClick = { onEvent(UiEvent.Resume) },
+            enabled = canResume,
+            accentColor = NeonPalette.NeonCyan,
+            disabledReason = "Aucune partie sauvegardée en cours",
+            onDisabledLongPress = { tooltip = it },
+            modifier = Modifier.fillMaxWidth()
+        )
+        tooltip?.let { Text(it, color = NeonPalette.NeonPink, fontSize = 12.sp) }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            NeonButton("Règles", onClick = { onEvent(UiEvent.OpenRules) }, modifier = Modifier.weight(1f), accentColor = NeonPalette.NeonCyan)
+            NeonButton("Monstres", onClick = { onEvent(UiEvent.NewGame) }, modifier = Modifier.weight(1f), accentColor = NeonPalette.NeonCyan)
+            NeonButton("Réglages", onClick = { onEvent(UiEvent.OpenSettings) }, modifier = Modifier.weight(1f), accentColor = NeonPalette.NeonCyan)
         }
     }
 }
@@ -133,81 +126,93 @@ fun MonsterPickerScreen(
     state: MonsterPickerUiState,
     onEvent: (UiEvent) -> Unit
 ) {
-    val selectedMonster = state.selected
     val isPortrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(NeonPalette.Background)
+            .systemBarsPadding()
             .padding(16.dp),
-        verticalArrangement = Arrangement.SpaceBetween
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("CHOISISSEZ VOTRE KAIJU BIO-MÉCANIQUE", color = NeonPalette.NeonCyan, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-        
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            NeonButton("‹", onClick = { onEvent(UiEvent.BackHome) }, accentColor = NeonPalette.NeonCyan,
+                modifier = Modifier.semantics { contentDescription = "Retour à l'accueil" })
+            Column {
+                Text("CHOISIS TON KAIJU", color = NeonPalette.NeonCyan, fontFamily = OrbitronFamily, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text("Vous + 3 IA", color = NeonPalette.TextPrimary, fontSize = 12.sp)
+            }
+        }
+
         if (isPortrait) {
             Column(
                 modifier = Modifier.fillMaxWidth().weight(1f),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 state.monsters.forEach { monster ->
-                    val isSelected = monster == selectedMonster
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                            .background(NeonPalette.Surface, RoundedCornerShape(10.dp))
-                            .border(
-                                width = if (isSelected) 3.dp else 1.dp,
-                                color = if (isSelected) NeonPalette.NeonPink else NeonPalette.NeonCyan.copy(alpha = 0.3f),
-                                shape = RoundedCornerShape(10.dp)
-                            )
-                            .clickable { onEvent(UiEvent.PickMonster(monster)) }
-                            .padding(10.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(monster.displayName, color = NeonPalette.TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            Spacer(Modifier.height(6.dp))
-                            Text(if (isSelected) "SÉLECTIONNÉ" else "DISPONIBLE", color = if (isSelected) NeonPalette.NeonPink else NeonPalette.NeonCyan, fontSize = 11.sp)
-                        }
-                    }
+                    MonsterCard(monster, monster == state.selected, onEvent, Modifier.fillMaxWidth().weight(1f))
                 }
             }
         } else {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().weight(1f),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 state.monsters.forEach { monster ->
-                    val isSelected = monster == selectedMonster
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(160.dp)
-                            .background(NeonPalette.Surface, RoundedCornerShape(10.dp))
-                            .border(
-                                width = if (isSelected) 3.dp else 1.dp,
-                                color = if (isSelected) NeonPalette.NeonPink else NeonPalette.NeonCyan.copy(alpha = 0.3f),
-                                shape = RoundedCornerShape(10.dp)
-                            )
-                            .clickable { onEvent(UiEvent.PickMonster(monster)) }
-                            .padding(10.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(monster.displayName, color = NeonPalette.TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            Spacer(Modifier.height(6.dp))
-                            Text(if (isSelected) "SÉLECTIONNÉ" else "DISPONIBLE", color = if (isSelected) NeonPalette.NeonPink else NeonPalette.NeonCyan, fontSize = 11.sp)
-                        }
-                    }
+                    MonsterCard(monster, monster == state.selected, onEvent, Modifier.weight(1f).fillMaxHeight())
                 }
             }
         }
-        
-        Row(modifier = Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.End) {
-            NeonButton("Lancer l'assaut (3 Bots)", onClick = { onEvent(UiEvent.StartGame) })
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Vos adversaires (IA)", color = NeonPalette.TextPrimary, fontSize = 12.sp)
+                    listOf("IA 1", "IA 2", "IA 3").forEach { chip ->
+                        Text(chip, color = NeonPalette.NeonCyan, fontSize = 11.sp, modifier = Modifier
+                            .border(1.dp, NeonPalette.NeonCyan.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+                            .padding(horizontal = 8.dp, vertical = 2.dp))
+                    }
+                }
+                Text("3 bots tirés au sort parmi les 5 autres", color = NeonPalette.TextPrimary, fontSize = 13.sp)
+            }
+            NeonButton("Entrer dans la ville", onClick = { onEvent(UiEvent.StartGame) })
         }
+    }
+}
+
+@Composable
+private fun MonsterCard(monster: MonsterId, isSelected: Boolean, onEvent: (UiEvent) -> Unit, modifier: Modifier) {
+    Column(
+        modifier = modifier
+            .semantics { contentDescription = "${monster.displayName}, ${if (isSelected) "sélectionné" else "disponible"}, ${monster.bio}" }
+            .background(NeonPalette.Surface, RoundedCornerShape(10.dp))
+            .border(
+                width = if (isSelected) 3.dp else 1.dp,
+                color = if (isSelected) NeonPalette.NeonPink else NeonPalette.NeonCyan.copy(alpha = 0.3f),
+                shape = RoundedCornerShape(10.dp)
+            )
+            .clickable(role = Role.Button) { onEvent(UiEvent.PickMonster(monster)) }
+            .padding(10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically)
+    ) {
+        // Barre décorative : certaines couleurs d'accent n'atteignent pas 4,5:1 en couleur de texte.
+        Box(Modifier.fillMaxWidth(0.5f).height(4.dp).background(Color(monster.accentHex), RoundedCornerShape(2.dp)))
+        Text(monster.displayName, color = NeonPalette.TextPrimary, fontFamily = OrbitronFamily, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+        Text(
+            monster.bio,
+            color = NeonPalette.TextPrimary,
+            fontSize = 11.sp,
+            lineHeight = 14.sp,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
+        Text(if (isSelected) "SÉLECTIONNÉ" else "DISPONIBLE", color = if (isSelected) NeonPalette.NeonPink else NeonPalette.NeonCyan, fontSize = 11.sp)
     }
 }
 
@@ -244,6 +249,7 @@ fun GameScreen(
                         verticalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            TurnStatusPanel(state, onEvent)
                             opponents.forEach { bot ->
                                 PlayerCardCompact(player = bot)
                             }
@@ -251,30 +257,32 @@ fun GameScreen(
                         PlayerCardSelf(player = me)
                     }
 
-                    Column(
+                    Row(
                         modifier = Modifier.weight(0.42f).fillMaxHeight(),
-                        verticalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        TurnStatusPanel(state, onEvent)
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth()
                                 .weight(1f)
+                                .fillMaxHeight()
                                 .background(NeonPalette.Surface, RoundedCornerShape(12.dp))
                                 .border(2.dp, NeonPalette.NeonCyan, RoundedCornerShape(12.dp))
                                 .padding(12.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("LA TOUR CENTRALE", color = NeonPalette.NeonCyan, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
-                                Spacer(Modifier.height(8.dp))
+                                Text("LA TOUR CENTRALE", color = NeonPalette.NeonCyan, fontFamily = OrbitronFamily, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+                                Spacer(Modifier.height(6.dp))
+                                TowerRing(occupant?.monster)
+                                Spacer(Modifier.height(6.dp))
                                 if (occupant != null) {
-                                    Text("👑 ${occupant.name}", color = NeonPalette.NeonPink, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                                    Text("👑 ${occupant.name}", color = NeonPalette.NeonPink, fontFamily = OrbitronFamily, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                                     Text("♥ ${occupant.hp}/10   ★ ${occupant.vp}/20", color = NeonPalette.TextPrimary, fontSize = 14.sp)
+                                    Text("+2 ★ au début de son tour", color = NeonPalette.TextPrimary, fontSize = 12.sp)
                                 } else {
                                     Text("ZONE LIBRE (+1 ★ à l'entrée)", color = NeonPalette.TextPrimary.copy(alpha = 0.7f), fontSize = 14.sp)
                                 }
-                                Spacer(Modifier.height(8.dp))
+                                Spacer(Modifier.height(4.dp))
                                 val botTurn = state.botTurn
                                 if (botTurn != null) {
                                     BotTurnOverlay(botTurn.botName, botTurn.lastAction, state.isBotFastForward,
@@ -292,8 +300,7 @@ fun GameScreen(
                                 }
                             }
                         }
-                        Spacer(Modifier.height(8.dp))
-                        SurchargeGaugeBar(malice = me.malice)
+                        SurchargeGaugeBar(malice = me.malice, tiers = state.maliceTiers, modifier = Modifier.fillMaxHeight())
                     }
 
                     Column(
@@ -310,10 +317,12 @@ fun GameScreen(
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
+                    .heightIn(min = 48.dp)
                     .background(NeonPalette.Surface, RoundedCornerShape(8.dp))
                     .border(1.dp, NeonPalette.NeonPink, RoundedCornerShape(8.dp))
                     .clickable { tooltipMessage = null }
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center
             ) {
                 Text(msg, color = NeonPalette.TextPrimary, fontSize = 13.sp)
             }
@@ -347,50 +356,10 @@ fun GameScreen(
 }
 
 @Composable
-fun NeonDieView(die: DieUi, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    val faceName = when (die.face) {
-        DieFace.ONE -> "chiffre 1"
-        DieFace.TWO -> "chiffre 2"
-        DieFace.THREE -> "chiffre 3"
-        DieFace.ENERGY -> "éclair"
-        DieFace.CLAW -> "griffe"
-        DieFace.HEART -> "cœur"
-    }
-    val symbol = when (die.face) {
-        DieFace.ONE -> "1"
-        DieFace.TWO -> "2"
-        DieFace.THREE -> "3"
-        DieFace.ENERGY -> "⚡"
-        DieFace.CLAW -> "🐾"
-        DieFace.HEART -> "♥"
-    }
-    val borderColor = if (die.isKept) NeonPalette.NeonPink else NeonPalette.NeonCyan
-    Box(
-        modifier = modifier
-            .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
-            .semantics { contentDescription = "Dé ${die.id + 1}, $faceName, ${if (die.isKept) "conservé, toucher pour relancer" else "à relancer, toucher pour conserver"}" }
-            .background(NeonPalette.Surface, RoundedCornerShape(8.dp))
-            .border(2.dp, borderColor, RoundedCornerShape(8.dp))
-            .clickable(enabled = die.canToggle) { onClick() }
-            .padding(6.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "$symbol\n${if (die.isKept) "🔒 Gardé" else "À relancer"}",
-            color = NeonPalette.TextPrimary,
-            fontWeight = FontWeight.Bold,
-            fontSize = 11.sp,
-            lineHeight = 14.sp,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-        )
-    }
-}
-
-@Composable
 fun PlayerCardCompact(player: PlayerUi, stacked: Boolean = false) {
     val border = if (player.isActive) NeonPalette.NeonPink else NeonPalette.NeonCyan.copy(alpha = 0.35f)
     val name = "${if (!player.isAlive) "☠ " else if (player.isInTokyo) "👑 " else ""}${player.name}"
-    val stats = "♥${player.hp} ★${player.vp} ⚡${player.energy} S${player.malice}"
+    val stats = "IA · ♥${player.hp} ★${player.vp} ⚡${player.energy} S${player.malice}"
     val gainsText = player.gains?.let { "Gains : +${it.vp} ★  +${it.energy} ⚡  +${it.healing} ♥" }
     val frame = Modifier.fillMaxWidth()
         .semantics(mergeDescendants = true) { contentDescription = player.accessibilityLabel }
@@ -398,13 +367,13 @@ fun PlayerCardCompact(player: PlayerUi, stacked: Boolean = false) {
         .border(1.dp, border, RoundedCornerShape(8.dp)).padding(8.dp)
     if (stacked) {
         Column(modifier = frame) {
-            Text(name, color = NeonPalette.TextPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp, lineHeight = 14.sp)
+            Text(name, color = NeonPalette.TextPrimary, fontFamily = OrbitronFamily, fontWeight = FontWeight.Bold, fontSize = 12.sp, lineHeight = 14.sp)
             Text(stats, color = NeonPalette.NeonCyan, fontSize = 11.sp, lineHeight = 14.sp)
             gainsText?.let { Text(it, color = NeonPalette.NeonPink, fontSize = 10.sp, lineHeight = 12.sp) }
         }
     } else {
         Row(modifier = frame, horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(name, color = NeonPalette.TextPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp, lineHeight = 16.sp)
+            Text(name, color = NeonPalette.TextPrimary, fontFamily = OrbitronFamily, fontWeight = FontWeight.Bold, fontSize = 12.sp, lineHeight = 16.sp)
             Column(horizontalAlignment = Alignment.End) {
                 Text(stats, color = NeonPalette.NeonCyan, fontSize = 12.sp, lineHeight = 16.sp)
                 gainsText?.let { Text(it, color = NeonPalette.NeonPink, fontSize = 10.sp, lineHeight = 12.sp) }
@@ -427,11 +396,12 @@ fun PlayerCardSelf(player: PlayerUi) {
         Text(
             text = "${if (player.isInTokyo) "👑 " else ""}${player.name} (VOUS)",
             color = NeonPalette.NeonPink,
+            fontFamily = OrbitronFamily,
             fontWeight = FontWeight.ExtraBold,
             fontSize = 14.sp
         )
         Text(
-            text = "♥ ${player.hp}/10   ★ ${player.vp}/20   ⚡ ${player.energy} Cellules",
+            text = "♥ ${player.hp}/10   ★ ${player.vp}/20   ⚡ ${player.energy} · ${player.cardCount} ${if (player.cardCount > 1) "cartes" else "carte"}",
             color = NeonPalette.TextPrimary,
             fontSize = 13.sp
         )
@@ -453,21 +423,37 @@ fun PlayerCardSelf(player: PlayerUi) {
     }
 }
 
+/** Jauge verticale graduée de 0 au dernier palier (wireframe 03) ; les paliers sont écrits, lisibles sans la couleur. */
 @Composable
-fun SurchargeGaugeBar(malice: Int) {
+fun SurchargeGaugeBar(malice: Int, tiers: List<Int>, modifier: Modifier = Modifier) {
+    val max = tiers.last()
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
+        modifier = modifier
+            .width(44.dp)
+            .semantics(mergeDescendants = true) {
+                contentDescription = "Surcharge $malice sur $max. Paliers ${tiers.joinToString(", ")} : choisir un pouvoir"
+            }
             .background(NeonPalette.Surface, RoundedCornerShape(8.dp))
-            .padding(8.dp)
+            .padding(horizontal = 4.dp, vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
-        Text(
-            text = "SURCHARGE (MÉCHANCETÉ) : $malice/10 — Paliers 3 / 6 / 10 : choisir un pouvoir",
-            color = NeonPalette.NeonCyan,
-            fontSize = 11.sp,
-            lineHeight = 13.sp,
-            fontWeight = FontWeight.Bold
-        )
+        Text("$malice/$max", color = NeonPalette.NeonCyan, fontSize = 11.sp, lineHeight = 13.sp, fontWeight = FontWeight.Bold)
+        for (level in max downTo 1) {
+            Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(if (level in tiers) "$level" else "", color = NeonPalette.TextPrimary, fontSize = 10.sp, lineHeight = 11.sp, modifier = Modifier.width(14.dp))
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .background(
+                            if (level <= malice) NeonPalette.NeonPink else NeonPalette.NeonCyan.copy(alpha = if (level in tiers) 0.6f else 0.2f),
+                            RoundedCornerShape(2.dp)
+                        )
+                )
+            }
+        }
+        Text("0", color = NeonPalette.TextPrimary, fontSize = 10.sp, lineHeight = 11.sp)
     }
 }
 
@@ -535,7 +521,7 @@ fun FleeDialog(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text("ALERTE BRÈCHE DANS LA TOUR", color = NeonPalette.NeonPink, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+            Text("ALERTE BRÈCHE DANS LA TOUR", color = NeonPalette.NeonPink, fontFamily = OrbitronFamily, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
             Text("${flee.attackerName} vous a infligé ${flee.damageTaken} dégât(s).", color = NeonPalette.TextPrimary, fontSize = 14.sp)
             Text("Il vous reste ${flee.remainingHp} ♥", color = NeonPalette.NeonPink, fontWeight = FontWeight.ExtraBold, fontSize = 24.sp)
             Row(
@@ -584,9 +570,9 @@ fun MalicePickerSheet(
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Palier ${pick.level} : choisir un pouvoir", color = NeonPalette.NeonCyan, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+            Text("Palier ${pick.level} : choisir un pouvoir", color = NeonPalette.NeonCyan, fontFamily = OrbitronFamily, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-                listOf(3, 6, 10).forEach { tier ->
+                pick.tiers.forEach { tier ->
                     MaliceTierChip(tier, isCurrent = tier == pick.level, Modifier.weight(1f))
                 }
             }
@@ -706,8 +692,9 @@ private fun GameOverHeadline(state: GameOverUiState, modifier: Modifier) {
         Text(
             text = state.winnerName?.let { "$it règne sur la mégapole" } ?: "Personne ne règne sur la mégapole",
             color = NeonPalette.NeonPink,
+            fontFamily = OrbitronFamily,
             fontWeight = FontWeight.ExtraBold,
-            fontSize = 24.sp,
+            fontSize = 22.sp,
             lineHeight = 28.sp
         )
         Text("Graine de partie : ${state.seed}", color = NeonPalette.TextPrimary, fontSize = 12.sp)

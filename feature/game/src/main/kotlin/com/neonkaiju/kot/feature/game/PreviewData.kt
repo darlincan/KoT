@@ -5,12 +5,11 @@ import com.neonkaiju.kot.model.DieFace
 import com.neonkaiju.kot.model.MonsterId
 import com.neonkaiju.kot.model.ResolutionGains
 import com.neonkaiju.kot.model.SymbolResolutionType
-import com.neonkaiju.kot.model.TurnPhase
 
 /** États d'écran construits à la main pour les captures Paparazzi. */
 internal object PreviewData {
     private val human = PlayerUi(0, MonsterId.VOLTRAX, hp = 7, vp = 12, energy = 5, malice = 3, isAlive = true, isInTokyo = true, isActive = true,
-        gains = ResolutionGains(vp = 3, energy = 2, isComplete = true, numbersVp = 2, tokyoVp = 1))
+        gains = ResolutionGains(vp = 3, energy = 2, isComplete = true, numbersVp = 2, tokyoVp = 1), cardCount = 2)
     private val bots = listOf(
         PlayerUi(1, MonsterId.KILOWATT, hp = 10, vp = 9, energy = 2, malice = 1, isAlive = true, isInTokyo = false, isActive = false),
         PlayerUi(2, MonsterId.HYDROKOR, hp = 4, vp = 15, energy = 0, malice = 6, isAlive = true, isInTokyo = false, isActive = false,
@@ -26,8 +25,10 @@ internal object PreviewData {
         opponents = bots,
         tokyoOccupant = human,
         activePlayerName = human.name,
-        phase = TurnPhase.LANCER,
-        isChoosingPower = false,
+        phaseLabel = "Lancer les dés",
+        isRolling = true,
+        isBuyPhase = false,
+        maliceTiers = listOf(3, 6, 10),
         dice = listOf(
             DieUi(0, DieFace.ONE, isKept = true, canToggle = true),
             DieUi(1, DieFace.ONE, isKept = true, canToggle = true),
@@ -64,12 +65,13 @@ internal object PreviewData {
     )
 
     val flee = game.copy(
-        phase = TurnPhase.DECISION_FUITE,
+        phaseLabel = "Fuir ou rester dans la Tour",
+        isRolling = false,
         flee = FleeUi(attackerName = bots[0].name, damageTaken = 3, remainingHp = human.hp),
     )
 
     val malicePick = game.copy(
-        isChoosingPower = true,
+        phaseLabel = "Choisir un pouvoir de Surcharge",
         malicePick = MalicePickUi(
             level = 6,
             tiles = listOf(
@@ -78,6 +80,7 @@ internal object PreviewData {
                 TileUi("reacteur", "Réacteur à fusion", "Gagnez 2 Cellules au début de votre tour."),
             ),
             ownedTiles = listOf(TileUi("court", "Court-circuit", "Gagnez 1 Cellule au début de chaque tour.")),
+            tiers = listOf(3, 6, 10),
         ),
     )
 
@@ -86,11 +89,13 @@ internal object PreviewData {
         isBotTurn = false,
         energy = human.energy,
         cards = listOf(
-            ShopCardUi("piratage", "Piratage neural", CardType.POUVOIR, "Après résolution, gagnez 1 ★ si vous êtes dans la Tour centrale.", cost = 4, baseCost = 4, canBuy = true),
-            ShopCardUi("frappe", "Frappe orbitale", CardType.ACTION, "Gagnez 2 ★ et infligez 3 dégâts à l'occupant de la Tour.", cost = 6, baseCost = 6, canBuy = false),
-            ShopCardUi("bombe", "Bombe IEM", CardType.ACTION, "Infligez 2 dégâts à tous les autres monstres et gagnez 1 ★.", cost = 3, baseCost = 4, canBuy = true),
+            ShopCardUi("piratage", "Piratage neural", CardType.POUVOIR, "Après résolution, gagnez 1 ★ si vous êtes dans la Tour centrale.", cost = 4, baseCost = 4, energyAfterPurchase = 1, canBuy = true),
+            ShopCardUi("frappe", "Frappe orbitale", CardType.ACTION, "Gagnez 2 ★ et infligez 3 dégâts à l'occupant de la Tour.", cost = 6, baseCost = 6, energyAfterPurchase = -1, canBuy = false),
+            ShopCardUi("bombe", "Bombe IEM", CardType.ACTION, "Infligez 2 dégâts à tous les autres monstres et gagnez 1 ★.", cost = 3, baseCost = 4, energyAfterPurchase = 2, canBuy = true),
         ),
         canSweep = true,
+        sweepCost = 2,
+        energyAfterSweep = 3,
         revision = 12,
         lastReceipt = "Cœur nucléaire : 8 − 3 = 5 Cellules",
     )

@@ -12,6 +12,12 @@ data class MarketQuote(val card: CardDef, val cost: Int, val energyBefore: Int, 
 }
 
 object GameEngine {
+    /** Paliers de Surcharge où un pouvoir est choisi (RULE-14). */
+    val MALICE_TIERS: List<Int> = listOf(3, 6, 10)
+
+    /** Prix du renouvellement des 3 cartes du Marché noir. */
+    const val SWEEP_COST: Int = 2
+
     val resolutionOrders: List<List<SymbolResolutionType>> = permutations(SymbolResolutionType.entries.toList())
 
     private fun permutations(items: List<SymbolResolutionType>): List<List<SymbolResolutionType>> =
@@ -133,7 +139,7 @@ object GameEngine {
                         actions.add(GameAction.BuyCard(card.id))
                     }
                 }
-                if (active.energy >= 2 && state.deck.size + state.discard.size >= 3) {
+                if (active.energy >= SWEEP_COST && state.deck.size + state.discard.size >= 3) {
                     actions.add(GameAction.SweepShop)
                 }
                 actions.add(GameAction.EndTurn)
@@ -288,7 +294,7 @@ object GameEngine {
                     .joinToString(" ; ") { (face, number) -> "${counts.getValue(face)} dés $number" }
                 val oldMalice = active.malice
                 val newMalice = (oldMalice + maliceGain).coerceAtMost(10)
-                val newlyCrossed = listOf(3, 6, 10).filter { level ->
+                val newlyCrossed = MALICE_TIERS.filter { level ->
                     oldMalice < level && newMalice >= level && level !in active.unlockedMaliceLevels &&
                         current.availableTiles.any { it.niveau == level }
                 }
@@ -519,7 +525,7 @@ object GameEngine {
         val remainingDeck = deck.drop(3)
 
         return updatePlayer(state, active.id) {
-            it.copy(energy = it.energy - 2)
+            it.copy(energy = it.energy - SWEEP_COST)
         }.copy(
             rng = rng,
             shop = newShop,
@@ -527,7 +533,7 @@ object GameEngine {
             discard = discard,
             lastMarketReceipts = state.lastMarketReceipts + (active.id to MarketReceipt(
                 itemName = "Renouvellement du marché", energyBefore = active.energy, paid = 2,
-                energyAfter = active.energy - 2, isSweep = true
+                energyAfter = active.energy - SWEEP_COST, isSweep = true
             )),
             actionLog = state.actionLog + "${active.monster.displayName} renouvelle le Marché noir (-2 ⚡)"
         )

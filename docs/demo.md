@@ -22,8 +22,8 @@ Les dés sont numérotés de gauche à droite, puis de haut en bas. Il faut atte
 
 | Étape | À faire | Ce que l'on doit voir | Ce que cela montre |
 | --- | --- | --- | --- |
-| Accueil | **Nouvelle partie** | Écran d'accueil et ses 4 entrées | Écran 01 |
-| Choix du monstre | Garder Voltrax, **Lancer l'assaut** | Voltrax sélectionné | Écran 02 |
+| Accueil | **Jouer** | Écran d'accueil et ses entrées | Écran 01 |
+| Choix du monstre | Garder Voltrax, **Entrer dans la ville** | Voltrax sélectionné | Écran 02 |
 | Tour des bots | Attendre | Explication du bot, Ferrodon entre dans la Tour | Bots, actions visibles |
 | Tour 1 | Dés `1 1 ♥ ⚡ 1 3` : garder 1, 2, 5, **Relancer** | `1 1 🐾 3 1 ♥` | Garder et relancer |
 | Tour 1 | Garder 3, **Relancer** | Résolution automatique : ★1, ⚡1, Surcharge 2 | Résolution |

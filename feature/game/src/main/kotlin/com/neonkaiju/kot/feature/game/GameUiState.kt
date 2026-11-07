@@ -5,7 +5,6 @@ import com.neonkaiju.kot.model.DieFace
 import com.neonkaiju.kot.model.MonsterId
 import com.neonkaiju.kot.model.ResolutionGains
 import com.neonkaiju.kot.model.SymbolResolutionType
-import com.neonkaiju.kot.model.TurnPhase
 
 
 data class HomeUiState(
@@ -29,6 +28,7 @@ data class PlayerUi(
     val isInTokyo: Boolean,
     val isActive: Boolean,
     val gains: ResolutionGains? = null,
+    val cardCount: Int = 0,
 ) {
     val name: String get() = monster.displayName
 
@@ -47,7 +47,21 @@ data class DieUi(
     val face: DieFace,
     val isKept: Boolean,
     val canToggle: Boolean,
-)
+) {
+    /** Annonce TalkBack en toutes lettres, sans symbole. */
+    val accessibilityLabel: String
+        get() {
+            val faceName = when (face) {
+                DieFace.ONE -> "chiffre 1"
+                DieFace.TWO -> "chiffre 2"
+                DieFace.THREE -> "chiffre 3"
+                DieFace.ENERGY -> "éclair"
+                DieFace.CLAW -> "griffe"
+                DieFace.HEART -> "cœur"
+            }
+            return "Dé ${id + 1} : $faceName, ${if (isKept) "verrouillé" else "libre"}"
+        }
+}
 
 /** raison pour une commande est grisée qu'on affiche au toucher long (rule transverse n2). */
 enum class BlockedReason {
@@ -77,6 +91,7 @@ data class MalicePickUi(
     val level: Int,
     val tiles: List<TileUi>,
     val ownedTiles: List<TileUi> = emptyList(),
+    val tiers: List<Int> = emptyList(),
 )
 
 data class GameUiState(
@@ -84,8 +99,10 @@ data class GameUiState(
     val opponents: List<PlayerUi>,
     val tokyoOccupant: PlayerUi?,
     val activePlayerName: String,
-    val phase: TurnPhase,
-    val isChoosingPower: Boolean,
+    val phaseLabel: String,
+    val isRolling: Boolean,
+    val isBuyPhase: Boolean,
+    val maliceTiers: List<Int>,
     val dice: List<DieUi>,
     val rollsMade: Int,
     val maxRolls: Int,
@@ -112,6 +129,8 @@ data class ShopCardUi(
     /** Prix reel, remise des cartes et tuiles deja applique. */
     val cost: Int,
     val baseCost: Int,
+    /** Négatif s'il manque des Cellules. */
+    val energyAfterPurchase: Int,
     val canBuy: Boolean,
 ) {
     val accessibilityLabel: String
@@ -127,6 +146,8 @@ data class ShopUiState(
     val energy: Int,
     val cards: List<ShopCardUi>,
     val canSweep: Boolean,
+    val sweepCost: Int,
+    val energyAfterSweep: Int,
     /** Une confirmation n'est valable que pour l'état de partie où elle a été ouverte. */
     val revision: Int,
     val lastReceipt: String?,

@@ -1,6 +1,15 @@
 package com.neonkaiju.kot.feature.game
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.neonkaiju.kot.model.DieFace
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.android.resources.ScreenOrientation
@@ -27,6 +36,21 @@ class ScreensSnapshotTest(private val device: DeviceConfig, private val deviceNa
     @Test fun flee() = capture("05_fuir_rester") { GameScreen(PreviewData.flee, onEvent = {}) }
     @Test fun malice() = capture("06_palier") { GameScreen(PreviewData.malicePick, onEvent = {}) }
     @Test fun gameOver() = capture("07_fin") { GameOverScreen(PreviewData.gameOver, onReplay = {}, onBackHome = {}) }
+    @Test fun homeWithoutGame() = capture("01b_accueil_sans_partie") { HomeScreen(PreviewData.home.copy(canResume = false), onEvent = {}) }
+
+    /** Les 6 faces, chacune gardée, libre puis non modifiable. */
+    @Test fun dice() = capture("de_etats") {
+        Column(Modifier.fillMaxSize().background(NeonPalette.Background).padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(true to true, false to true, false to false).forEach { (kept, canToggle) ->
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    DieFace.entries.forEachIndexed { index, face ->
+                        NeonDieView(DieUi(index, face, kept, canToggle), Modifier.weight(1f)) {}
+                    }
+                }
+            }
+        }
+    }
+
     @Test fun rules() = capture("regles") { RulesScreen(onBack = {}) }
     @Test fun settings() = capture("reglages") { SettingsScreen(PreviewData.settings, onToggleFastBot = {}, onToggleFleeCountdown = {}, onBack = {}) }
 
