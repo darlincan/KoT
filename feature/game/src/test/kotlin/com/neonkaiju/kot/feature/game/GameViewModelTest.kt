@@ -6,6 +6,7 @@ import com.neonkaiju.kot.ai.HeuristicBotPolicy
 import com.neonkaiju.kot.content.CatalogData
 import com.neonkaiju.kot.content.CatalogLoader
 import com.neonkaiju.kot.data.CatalogRepository
+import com.neonkaiju.kot.data.FileGameRepository
 import com.neonkaiju.kot.data.GameRepository
 import com.neonkaiju.kot.data.Settings
 import com.neonkaiju.kot.data.SettingsRepository
@@ -13,6 +14,8 @@ import com.neonkaiju.kot.engine.GameEngine
 import com.neonkaiju.kot.model.GameAction
 import com.neonkaiju.kot.model.GameState
 import com.neonkaiju.kot.model.MonsterId
+import com.neonkaiju.kot.model.PendingFleeDecision
+import com.neonkaiju.kot.model.TurnPhase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -31,11 +34,16 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.io.File
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class GameViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
+
+    @TempDir
+    lateinit var dir: File
     private val catalog = CatalogLoader.loadCatalog()
 
     private class InMemoryGameRepository(var saved: GameState? = null) : GameRepository {
@@ -184,6 +192,65 @@ class GameViewModelTest {
         runCurrent()
 
         assertEquals(1, decisions)
+        job.cancel()
+    }
+
+    /** Sauvegarde sur disque puis recrée un ViewModel neuf, comme après l'arrêt du processus par le système. */
+    private suspend fun TestScope.restartWith(saved: GameState): GameViewModel {
+        val file = File(dir, "saved_game_v1.json")
+        FileGameRepository(file, dispatcher).save(saved)
+        return viewModel(FileGameRepository(file, dispatcher))
+    }
+
+    @Test
+    fun `process death during Flee or Stay restores the dialog and the decision still works`() = runTest(dispatcher) {
+        val game = newGame()
+        val human = game.players.first { !it.isBot }
+        val attacker = game.players.first { it.isBot }
+        val pending = game.copy(
+            activePlayerIndex = game.players.indexOf(attacker),
+            phase = TurnPhase.DECISION_FUITE,
+            tokyoOccupantId = human.id,
+            pendingFlee = PendingFleeDecision(attackerId = attacker.id, occupantId = human.id, damageTaken = 2),
+        )
+
+        val viewModel = restartWith(pending)
+        val job = backgroundScope.launch { viewModel.gameUiState.collect {} }
+        viewModel.setBotsActive(true)
+        advanceTimeBy(10_000)
+
+        assertEquals(pending, viewModel.game.value, "aucun bot ne joue à la place du joueur")
+        assertEquals(attacker.monster.displayName, viewModel.gameUiState.value?.flee?.attackerName)
+
+        viewModel.dispatch(GameAction.Stay)
+        assertNull(viewModel.game.value?.pendingFlee)
+        assertEquals(human.id, viewModel.game.value?.tokyoOccupantId)
+        job.cancel()
+    }
+
+    @Test
+    fun `process death during a tile choice restores the picker and the choice still works`() = runTest(dispatcher) {
+        val game = newGame()
+        val pending = game.copy(
+            activePlayerIndex = game.players.indexOfFirst { !it.isBot },
+            phase = TurnPhase.RESOUDRE,
+            unresolvedSymbols = emptySet(),
+            pendingMaliceLevels = listOf(3),
+        )
+        val tile = pending.availableTiles.first { it.niveau == 3 }
+
+        val viewModel = restartWith(pending)
+        val job = backgroundScope.launch { viewModel.gameUiState.collect {} }
+        runCurrent()
+
+        assertEquals(3, viewModel.gameUiState.value?.malicePick?.level)
+        assertTrue(viewModel.gameUiState.value?.malicePick?.tiles.orEmpty().any { it.id == tile.id })
+
+        viewModel.dispatch(GameAction.PickMaliceTile(tile.id))
+        val human = viewModel.game.value!!.players.first { !it.isBot }
+        assertTrue(human.tiles.any { it.id == tile.id })
+        runCurrent()
+        assertNull(viewModel.gameUiState.value?.malicePick)
         job.cancel()
     }
 
