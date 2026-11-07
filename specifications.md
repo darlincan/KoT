@@ -563,7 +563,7 @@ Tous les écrans sont en **paysage**. Chaque écran est un composable sans état
 - [x] **Bots** : un seul comportement, simple et conforme aux règles, pour les 3 bots. Pas de niveaux de difficulté : ils ne sont pas demandés.
 - [x] **Forme du rendu** : le dépôt GitHub, sans APK signé (§1).
 - [x] **Délai sur Fuir ou Rester** : **aucun délai par défaut**. Le choix revient au joueur ; le compte à rebours du wireframe est un ajout d'interface, facultatif, activable dans les réglages et coupé automatiquement quand TalkBack est actif (§9, règle 6).
-- [x] **Libellés de la jauge de Surcharge** : ils annoncent un choix de tuile (« Palier 3 : choisir un pouvoir »), pas un effet fixe, conformément à RULE-14. L'écran 06 du wireframe, qui affiche une récompense fixe par palier, doit être corrigé.
+- [x] **Libellés de la jauge de Surcharge** : ils annoncent un choix de tuile (« Palier 3 : choisir un pouvoir »), pas un effet fixe, conformément à RULE-14. L'écran 06 du wireframe est corrigé en portrait et en paysage : chaque palier (3 / 6 / 10) annonce « Choisir un pouvoir » et les choix présentés sont identifiés comme les pouvoirs disponibles du palier atteint, avec à part les pouvoirs déjà détenus (§9).
 
 ### À demander à l'enseignant (un seul message)
 

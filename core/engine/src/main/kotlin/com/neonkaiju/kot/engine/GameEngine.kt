@@ -6,7 +6,28 @@ import com.neonkaiju.kot.model.*
 
 class IllegalActionException(message: String) : IllegalArgumentException(message)
 
+data class MarketQuote(val card: CardDef, val cost: Int, val energyBefore: Int, val revision: Int) {
+    val canAfford: Boolean get() = energyBefore >= cost
+    val afterPayment: Int get() = energyBefore - cost
+}
+
 object GameEngine {
+    val resolutionOrders: List<List<SymbolResolutionType>> = permutations(SymbolResolutionType.entries.toList())
+
+    private fun permutations(items: List<SymbolResolutionType>): List<List<SymbolResolutionType>> =
+        if (items.isEmpty()) listOf(emptyList())
+        else items.flatMap { first -> permutations(items - first).map { listOf(first) + it } }
+
+    /** Continue automatic work, stopping only for a player's decision or the shop. */
+    fun advanceAutomatically(state: GameState): GameState {
+        var current = state
+        while (current.phase == TurnPhase.RESOUDRE && current.pendingMaliceLevels.isEmpty()) {
+            val symbol = current.resolutionOrder.firstOrNull { it in current.unresolvedSymbols }
+            current = if (symbol == null) advanceAfterResolution(current) else handleResolveSymbol(current, symbol)
+        }
+        return current
+    }
+
 
     fun createGame(
         seed: Long,
@@ -31,6 +52,24 @@ object GameEngine {
         val shop = shuffledDeck.take(3)
         val deck = shuffledDeck.drop(3)
 
+        var contenders = players.map { it.id }
+        var firstPlayer = 0
+        while (contenders.isNotEmpty()) {
+            val scores = contenders.associateWith {
+                (0 until 6).count {
+                    val (face, next) = rng.nextDieFace()
+                    rng = next
+                    face == DieFace.CLAW
+                }
+            }
+            val best = scores.values.max()
+            contenders = contenders.filter { scores[it] == best }
+            if (contenders.size == 1) {
+                firstPlayer = contenders.single()
+                break
+            }
+        }
+
         val initialDice = mutableListOf<Die>()
         for (i in 0 until 6) {
             val (face, nextRng) = rng.nextDieFace()
@@ -41,7 +80,7 @@ object GameEngine {
         val initialState = GameState(
             rng = rng,
             players = players,
-            activePlayerIndex = 0,
+            activePlayerIndex = firstPlayer,
             tokyoOccupantId = null,
             phase = TurnPhase.LANCER,
             rollsLeft = 2,
@@ -49,10 +88,10 @@ object GameEngine {
             deck = deck,
             shop = shop,
             availableTiles = catalog.tiles,
-            actionLog = listOf("Partie initialisée (Graine: $seed)")
+            actionLog = listOf("Partie initialisée", "${players[firstPlayer].monster.displayName} commence (concours de griffes). Premier lancer automatique : 1/3")
         )
 
-        return EffectInterpreter.applyTrigger(initialState, EffectTrigger.AVANT_LANCER, 0)
+        return EffectInterpreter.applyTrigger(initialState, EffectTrigger.AVANT_LANCER, firstPlayer)
     }
 
     fun legalActions(state: GameState): List<GameAction> {
@@ -75,6 +114,7 @@ object GameEngine {
                         actions.add(GameAction.Reroll)
                     }
                 }
+                actions.addAll(resolutionOrders.map { GameAction.SetResolutionOrder(it) })
                 actions.add(GameAction.StopRolling)
                 actions
             }
@@ -103,6 +143,20 @@ object GameEngine {
         }
     }
 
+    fun quoteCard(state: GameState, cardId: String): MarketQuote {
+        if (state.phase != TurnPhase.ACHETER || state.pendingMaliceLevels.isNotEmpty()) {
+            throw IllegalActionException("Le marché n’est pas disponible dans cette phase")
+        }
+        val card = state.shop.firstOrNull { it.id == cardId }
+            ?: throw IllegalActionException("Cette carte n’est plus visible au marché")
+        return MarketQuote(card, EffectInterpreter.computeCardCost(state, state.activePlayer.id, card),
+            state.activePlayer.energy, state.actionHistory.size)
+    }
+
+    /** UI commands are tied to the state that was confirmed; stale repeated taps do nothing. */
+    fun reduceIfCurrent(state: GameState, action: GameAction, expectedRevision: Int): GameState =
+        if (state.actionHistory.size != expectedRevision) state else reduce(state, action)
+
     fun reduce(state: GameState, action: GameAction): GameState {
         val allowed = legalActions(state)
         if (action !in allowed) {
@@ -110,15 +164,18 @@ object GameEngine {
         }
 
         if (action is GameAction.PickMaliceTile) {
-            return handlePickMaliceTile(state, action.tileId)
+            val result = advanceAutomatically(handlePickMaliceTile(state, action.tileId))
+            return recordGains(state, result, action).copy(actionHistory = state.actionHistory + action)
         }
 
-        return when (action) {
+        val result = advanceAutomatically(when (action) {
+            is GameAction.SetResolutionOrder -> state.copy(resolutionOrder = action.order)
             is GameAction.ToggleKeep -> {
                 val newDice = state.dice.map {
                     if (it.id == action.dieId) it.copy(isKept = !it.isKept) else it
                 }
-                state.copy(dice = newDice)
+                val die = newDice.first { it.id == action.dieId }
+                state.copy(dice = newDice, actionLog = state.actionLog + "${state.activePlayer.monster.displayName} : dé ${die.id + 1} ${if (die.isKept) "conservé" else "libéré"}")
             }
             is GameAction.Reroll -> {
                 var rng = state.rng
@@ -135,7 +192,7 @@ object GameEngine {
                     rng = rng,
                     dice = newDice,
                     rollsLeft = newRollsLeft,
-                    actionLog = state.actionLog + "${state.activePlayer.monster.displayName} relance (${2 - newRollsLeft}/2)"
+                    actionLog = state.actionLog + "${state.activePlayer.monster.displayName} relance (${state.maxRolls - newRollsLeft}/${state.maxRolls})"
                 )
                 if (newRollsLeft == 0) transitionToResolve(updated) else updated
             }
@@ -147,10 +204,52 @@ object GameEngine {
             is GameAction.SweepShop -> handleSweepShop(state)
             is GameAction.EndTurn -> handleEndTurn(state)
             else -> state
-        }
+        })
+        return recordGains(state, result, action).copy(actionHistory = state.actionHistory + action)
     }
 
-    private fun transitionToResolve(state: GameState): GameState {
+    private fun recordGains(before: GameState, after: GameState, action: GameAction): GameState {
+        val startsResolution = action == GameAction.StopRolling ||
+            (action == GameAction.Reroll && before.rollsLeft == 1)
+        val continuesResolution = before.phase in listOf(TurnPhase.RESOUDRE, TurnPhase.DECISION_FUITE)
+        if (startsResolution || continuesResolution) {
+            val owner = before.activePlayer
+            val updated = after.players.first { it.id == owner.id }
+            val previous = if (startsResolution) ResolutionGains() else
+                before.lastResolutionGains[owner.id]?.takeUnless { it.isStartOfTurn } ?: ResolutionGains()
+            val gains = previous.copy(
+                vp = previous.vp + (updated.vp - owner.vp).coerceAtLeast(0),
+                energy = previous.energy + (updated.energy - owner.energy).coerceAtLeast(0),
+                healing = previous.healing + (updated.hp - owner.hp).coerceAtLeast(0),
+                malice = previous.malice + (updated.malice - owner.malice).coerceAtLeast(0),
+                numbersVp = after.lastResolutionGains[owner.id]?.numbersVp ?: previous.numbersVp,
+                tokyoVp = after.lastResolutionGains[owner.id]?.tokyoVp ?: previous.tokyoVp,
+                isComplete = after.phase in listOf(TurnPhase.ACHETER, TurnPhase.FIN_PARTIE) ||
+                    after.activePlayer.id != owner.id
+            )
+            return after.copy(lastResolutionGains = after.lastResolutionGains + (owner.id to gains))
+        }
+        if (action == GameAction.EndTurn && after.activePlayer.id != before.activePlayer.id) {
+            val next = after.activePlayer
+            val old = before.players.first { it.id == next.id }
+            val gains = ResolutionGains(
+                vp = (next.vp - old.vp).coerceAtLeast(0),
+                energy = (next.energy - old.energy).coerceAtLeast(0),
+                healing = (next.hp - old.hp).coerceAtLeast(0),
+                malice = (next.malice - old.malice).coerceAtLeast(0),
+                isComplete = true, isStartOfTurn = true,
+                tokyoVp = if (before.tokyoOccupantId == next.id) minOf(2, (next.vp - old.vp).coerceAtLeast(0)) else 0
+            )
+            if (gains.vp + gains.energy + gains.healing + gains.malice > 0) {
+                return after.copy(lastResolutionGains = after.lastResolutionGains + (next.id to gains))
+            }
+        }
+        return after
+    }
+
+    private fun transitionToResolve(before: GameState): GameState {
+        val state = EffectInterpreter.applyTrigger(before.copy(resolutionLogStart = before.actionLog.size,
+            lastResolutionGains = before.lastResolutionGains + (before.activePlayer.id to ResolutionGains())), EffectTrigger.AVANT_RESOLUTION, before.activePlayer.id)
         val presentTypes = mutableSetOf<SymbolResolutionType>()
         val counts = state.dice.groupingBy { it.face }.eachCount()
         if ((counts[DieFace.ONE] ?: 0) >= 3 || (counts[DieFace.TWO] ?: 0) >= 3 || (counts[DieFace.THREE] ?: 0) >= 3) {
@@ -184,6 +283,9 @@ object GameEngine {
                         if (face == DieFace.TWO) maliceGain += 1
                     }
                 }
+                val combinations = listOf(DieFace.ONE to 1, DieFace.TWO to 2, DieFace.THREE to 3)
+                    .filter { (counts[it.first] ?: 0) >= 3 }
+                    .joinToString(" ; ") { (face, number) -> "${counts.getValue(face)} dés $number" }
                 val oldMalice = active.malice
                 val newMalice = (oldMalice + maliceGain).coerceAtMost(10)
                 val newlyCrossed = listOf(3, 6, 10).filter { level ->
@@ -197,8 +299,11 @@ object GameEngine {
                     )
                 }.copy(
                     pendingMaliceLevels = current.pendingMaliceLevels + newlyCrossed,
-                    actionLog = current.actionLog + "${active.monster.displayName} gagne +$vpGain ★ et +$maliceGain Surcharge"
+                    actionLog = current.actionLog + "${active.monster.displayName} — $combinations : gagne +${minOf(vpGain, 20 - active.vp)} ★ avec les dés ; +${newMalice - oldMalice} Surcharge"
                 )
+                val report = current.lastResolutionGains[active.id] ?: ResolutionGains()
+                current = current.copy(lastResolutionGains = current.lastResolutionGains +
+                    (active.id to report.copy(numbersVp = report.numbersVp + minOf(vpGain, 20 - active.vp))))
             }
             SymbolResolutionType.ENERGY -> {
                 val eGain = counts[DieFace.ENERGY] ?: 0
@@ -209,9 +314,10 @@ object GameEngine {
             SymbolResolutionType.HEARTS -> {
                 val hCount = counts[DieFace.HEART] ?: 0
                 if (current.tokyoOccupantId != active.id) {
+                    val healed = minOf(hCount, active.maxHp - active.hp)
                     current = updatePlayer(current, active.id) {
-                        it.copy(hp = (it.hp + hCount).coerceAtMost(it.maxHp))
-                    }.copy(actionLog = current.actionLog + "${active.monster.displayName} récupère +$hCount ♥")
+                        it.copy(hp = it.hp + healed)
+                    }.copy(actionLog = current.actionLog + "${active.monster.displayName} récupère +$healed ♥")
                 } else {
                     current = current.copy(actionLog = current.actionLog + "${active.monster.displayName} est dans la Tour : les ♥ des dés ne soignent pas")
                 }
@@ -221,21 +327,27 @@ object GameEngine {
                 if (claws > 0) {
                     if (current.tokyoOccupantId == active.id) {
                         val targets = current.players.filter { it.isAlive && it.id != active.id }.map { it.id }
+                        val damaged = mutableSetOf<Int>()
                         for (tid in targets) {
                             val reduction = EffectInterpreter.computeDamageReduction(current, tid)
                             val dmg = (claws - reduction).coerceAtLeast(0)
-                            current = EffectInterpreter.applyDirectDamage(current, tid, dmg)
+                            if (dmg > 0) damaged.add(tid)
+                            val targetBefore = current.players.first { it.id == tid }
+                            current = EffectInterpreter.applyDamage(current, tid, claws)
+                            val targetAfter = current.players.first { it.id == tid }
+                            current = current.copy(actionLog = current.actionLog + "${active.monster.displayName} → ${targetAfter.monster.displayName} : ${targetBefore.hp - targetAfter.hp} dégât(s), ${targetBefore.hp} → ${targetAfter.hp} ♥")
                         }
-                        current = EffectInterpreter.applyTrigger(current, EffectTrigger.APRES_DEGAT_INFLIGE, active.id)
+                        if (damaged.isNotEmpty()) current = EffectInterpreter.applyTrigger(current, EffectTrigger.APRES_DEGAT_INFLIGE, active.id, damagedPlayerIds = damaged)
                         current = current.copy(actionLog = current.actionLog + "${active.monster.displayName} frappe toute la ville ($claws 🐾)")
                     } else {
                         val occupantId = current.tokyoOccupantId
                         if (occupantId != null) {
                             val reduction = EffectInterpreter.computeDamageReduction(current, occupantId)
                             val dmg = (claws - reduction).coerceAtLeast(0)
+                            val hpBefore = current.players.first { it.id == occupantId }.hp
+                            current = EffectInterpreter.applyDamage(current, occupantId, claws)
                             if (dmg > 0) {
-                                current = EffectInterpreter.applyDirectDamage(current, occupantId, dmg)
-                                current = EffectInterpreter.applyTrigger(current, EffectTrigger.APRES_DEGAT_INFLIGE, active.id)
+                                current = EffectInterpreter.applyTrigger(current, EffectTrigger.APRES_DEGAT_INFLIGE, active.id, damagedPlayerIds = setOf(occupantId))
                                 val occupantAfter = current.players.first { it.id == occupantId }
                                 if (occupantAfter.isAlive) {
                                     return current.copy(
@@ -243,9 +355,9 @@ object GameEngine {
                                         pendingFlee = PendingFleeDecision(
                                             attackerId = active.id,
                                             occupantId = occupantId,
-                                            damageTaken = dmg
+                                            damageTaken = hpBefore - occupantAfter.hp
                                         ),
-                                        actionLog = current.actionLog + "${active.monster.displayName} inflige $dmg dégât(s) à ${occupantAfter.monster.displayName}"
+                                        actionLog = current.actionLog + "${active.monster.displayName} → ${occupantAfter.monster.displayName} : ${hpBefore - occupantAfter.hp} dégât(s), $hpBefore → ${occupantAfter.hp} ♥"
                                     )
                                 } else {
                                     current = current.copy(
@@ -325,15 +437,22 @@ object GameEngine {
 
         current = current.copy(phase = TurnPhase.ENTRER)
         if (current.tokyoOccupantId == null && current.activePlayer.isAlive) {
+            val entryGain = minOf(1, 20 - current.activePlayer.vp)
+            val report = current.lastResolutionGains[activeId] ?: ResolutionGains()
+            current = current.copy(lastResolutionGains = current.lastResolutionGains +
+                (activeId to report.copy(tokyoVp = report.tokyoVp + entryGain)))
             current = updatePlayer(current, activeId) {
                 it.copy(vp = (it.vp + 1).coerceAtMost(20))
             }.copy(
                 tokyoOccupantId = activeId,
-                actionLog = current.actionLog + "${current.activePlayer.monster.displayName} entre dans la Tour (+1 ★)"
+                actionLog = current.actionLog + "${current.activePlayer.monster.displayName} entre dans la Tour (+$entryGain ★)"
             )
             current = EffectInterpreter.applyTrigger(current, EffectTrigger.ENTREE_TOKYO, activeId)
         }
 
+        current = checkImmediateElimination(current)
+        if (current.phase == TurnPhase.FIN_PARTIE) return current
+        if (!current.activePlayer.isAlive) return handleEndTurn(current)
         return current.copy(phase = TurnPhase.ACHETER)
     }
 
@@ -368,11 +487,19 @@ object GameEngine {
             actionLog = state.actionLog + "${active.monster.displayName} achète ${card.nom} (-$cost ⚡)"
         )
 
+        val effectsStart = current.actionLog.size
         if (card.type == CardType.ACTION) {
             current = EffectInterpreter.applyTrigger(current, EffectTrigger.ACHAT, active.id, card.effets)
         }
 
-        return checkImmediateElimination(current)
+        val energyAfter = current.players.first { it.id == active.id }.energy
+        val receipt = MarketReceipt(
+            itemName = card.nom, energyBefore = active.energy, paid = cost, energyAfter = energyAfter,
+            effectEnergyChange = energyAfter - (active.energy - cost), effects = current.actionLog.drop(effectsStart)
+        )
+        current = current.copy(lastMarketReceipts = current.lastMarketReceipts + (active.id to receipt))
+        current = checkImmediateElimination(current)
+        return if (current.phase != TurnPhase.FIN_PARTIE && !current.activePlayer.isAlive) handleEndTurn(current) else current
     }
 
     private fun handleSweepShop(state: GameState): GameState {
@@ -398,6 +525,10 @@ object GameEngine {
             shop = newShop,
             deck = remainingDeck,
             discard = discard,
+            lastMarketReceipts = state.lastMarketReceipts + (active.id to MarketReceipt(
+                itemName = "Renouvellement du marché", energyBefore = active.energy, paid = 2,
+                energyAfter = active.energy - 2, isSweep = true
+            )),
             actionLog = state.actionLog + "${active.monster.displayName} renouvelle le Marché noir (-2 ⚡)"
         )
     }
@@ -427,7 +558,7 @@ object GameEngine {
 
         current = current.copy(
             activePlayerIndex = nextIndex,
-            players = current.players.map { it.copy(damageTakenThisTurn = 0) }
+            players = current.players.map { it.copy(damageTakenThisTurn = 0, damagePreventedThisTurn = 0) }
         )
 
         if (current.tokyoOccupantId == nextPlayerId) {
@@ -437,6 +568,9 @@ object GameEngine {
         }
 
         current = EffectInterpreter.applyTrigger(current, EffectTrigger.DEBUT_TOUR, nextPlayerId)
+        current = checkImmediateElimination(current)
+        if (current.phase == TurnPhase.FIN_PARTIE) return current
+        if (!current.activePlayer.isAlive) return handleEndTurn(current)
 
         var rng = current.rng
         val freshDice = (0 until 6).map { id ->
@@ -449,6 +583,12 @@ object GameEngine {
             rng = rng,
             phase = TurnPhase.LANCER,
             rollsLeft = 2,
+            maxRolls = 3,
+            unresolvedSymbols = emptySet(),
+            pendingFlee = null,
+            pendingMaliceLevels = emptyList(),
+            resolutionLogStart = current.actionLog.size,
+            actionLog = current.actionLog + "${current.activePlayer.monster.displayName} : premier lancer automatique (1/3)",
             dice = freshDice
         )
         return EffectInterpreter.applyTrigger(current, EffectTrigger.AVANT_LANCER, nextPlayerId)
