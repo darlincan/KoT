@@ -8,6 +8,10 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 
 // partie en cours et  une seule sauvegarde, reprise au lancement de l'application.
@@ -33,12 +37,34 @@ class FileGameRepository(
 
     private val mutex = Mutex()
 
+    /**
+     * La version est lue avant le décodage : une sauvegarde plus ancienne passe par [migrate],
+     * une sauvegarde plus récente (app rétrogradée) ou illisible est supprimée plutôt que mal interprétée.
+     */
     override suspend fun load(): GameState? = mutex.withLock {
-        withContext(ioDispatcher) {
-            runCatching {
-                if (file.exists()) json.decodeFromString<GameState>(file.readText()) else null
+        withContext(ioDispatcher + NonCancellable) {
+            if (!file.exists()) return@withContext null
+            val state = runCatching {
+                val raw = json.parseToJsonElement(file.readText()).jsonObject
+                // les sauvegardes v1 écrites avant @EncodeDefault n'ont pas de champ version.
+                val version = raw["version"]?.jsonPrimitive?.int ?: 1
+                if (version > GameState.CURRENT_VERSION) null
+                else json.decodeFromJsonElement(GameState.serializer(), migrate(raw, version))
             }.getOrNull()
+            if (state == null) file.delete()
+            state
         }
+    }
+
+    // fait monter le json d'une version à la suivante jusqu'à CURRENT_VERSION. Rien à migrer tant qu'on est en v1.
+    private fun migrate(raw: JsonObject, from: Int): JsonObject {
+        var current = raw
+        for (version in from until GameState.CURRENT_VERSION) {
+            current = when (version) {
+                else -> error("migration manquante depuis la v$version")
+            }
+        }
+        return current
     }
 
     override suspend fun save(state: GameState) = mutex.withLock {
