@@ -12,6 +12,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -474,6 +475,14 @@ fun BotTurnOverlay(
     }
 }
 
+/**
+ * Une décision en superposition doit être modale : sans récepteur de toucher, un appui hors des boutons
+ * traverse le voile et atteint le plateau dessous (Résumé, Pause…). Ici le voile capte le toucher et l'ignore.
+ */
+private fun Modifier.blockTouchesBehind(): Modifier = pointerInput(Unit) {
+    awaitPointerEventScope { while (true) awaitPointerEvent() }
+}
+
 @Composable
 fun FleeDialog(
     flee: FleeUi,
@@ -483,6 +492,7 @@ fun FleeDialog(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .blockTouchesBehind()
             .background(NeonPalette.Background.copy(alpha = 0.92f)),
         contentAlignment = Alignment.Center
     ) {
@@ -536,6 +546,7 @@ fun MalicePickerSheet(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .blockTouchesBehind()
             .background(NeonPalette.Background.copy(alpha = 0.94f))
             .padding(8.dp),
         contentAlignment = Alignment.Center
