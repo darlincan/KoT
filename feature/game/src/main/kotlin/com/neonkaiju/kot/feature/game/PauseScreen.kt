@@ -9,7 +9,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.neonkaiju.kot.model.GameState
 import com.neonkaiju.kot.model.TurnPhase
 
 @Composable
@@ -25,9 +24,8 @@ fun PauseScreen(onResume: () -> Unit, onSaveAndQuit: () -> Unit, onHome: () -> U
 }
 
 @Composable
-fun TurnStatusPanel(state: GameState, onEvent: (UiEvent) -> Unit) {
-    val decision = state.decisionPlayer
-    val phase = if (state.pendingMaliceLevels.isNotEmpty()) "Choisir un pouvoir de Surcharge" else when (state.phase) {
+fun TurnStatusPanel(state: GameUiState, onEvent: (UiEvent) -> Unit) {
+    val phase = if (state.isChoosingPower) "Choisir un pouvoir de Surcharge" else when (state.phase) {
         TurnPhase.LANCER -> "Lancer les dés"
         TurnPhase.RESOUDRE -> "Résoudre les résultats"
         TurnPhase.DECISION_FUITE -> "Fuir ou rester dans la Tour"
@@ -38,7 +36,7 @@ fun TurnStatusPanel(state: GameState, onEvent: (UiEvent) -> Unit) {
     }
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         Column(Modifier.weight(1f)) {
-            Text(if (decision.isBot) "Tour de ${decision.monster.displayName} — le bot joue" else "À TON TOUR",
+            Text(state.botTurn?.let { "Tour de ${it.botName} — le bot joue" } ?: "À TON TOUR",
                 color = NeonPalette.NeonPink, fontWeight = FontWeight.Bold, fontSize = 12.sp, lineHeight = 14.sp)
             Text(phase, color = NeonPalette.TextPrimary, fontSize = 11.sp, lineHeight = 13.sp)
         }

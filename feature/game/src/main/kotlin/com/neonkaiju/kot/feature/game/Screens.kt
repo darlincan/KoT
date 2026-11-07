@@ -18,7 +18,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.neonkaiju.kot.content.EffectInterpreter
 import com.neonkaiju.kot.model.*
 import androidx.compose.ui.platform.LocalConfiguration
 import android.content.res.Configuration
@@ -41,10 +40,11 @@ sealed interface UiEvent {
 
 @Composable
 fun HomeScreen(
-    canResume: Boolean,
-    version: String,
+    state: HomeUiState,
     onEvent: (UiEvent) -> Unit
 ) {
+    val canResume = state.canResume
+    val version = state.version
     val isPortrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
 
     if (isPortrait) {
@@ -123,9 +123,10 @@ fun HomeScreen(
 
 @Composable
 fun MonsterPickerScreen(
-    selectedMonster: MonsterId,
+    state: MonsterPickerUiState,
     onEvent: (UiEvent) -> Unit
 ) {
+    val selectedMonster = state.selected
     val isPortrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
 
     Column(
@@ -142,7 +143,7 @@ fun MonsterPickerScreen(
                 modifier = Modifier.fillMaxWidth().weight(1f),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                MonsterId.entries.forEach { monster ->
+                state.monsters.forEach { monster ->
                     val isSelected = monster == selectedMonster
                     Box(
                         modifier = Modifier
@@ -171,7 +172,7 @@ fun MonsterPickerScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                MonsterId.entries.forEach { monster ->
+                state.monsters.forEach { monster ->
                     val isSelected = monster == selectedMonster
                     Box(
                         modifier = Modifier
@@ -205,18 +206,16 @@ fun MonsterPickerScreen(
 
 @Composable
 fun GameScreen(
-    state: GameState,
-    isBotFastForward: Boolean,
-    botExplanation: String?,
+    state: GameUiState,
     onEvent: (UiEvent) -> Unit
 ) {
     var tooltipMessage by remember { mutableStateOf<String?>(null) }
     var showSummary by remember { mutableStateOf(false) }
-    
+
     val isPortrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
-    val me = state.players.first { !it.isBot }
-    val opponents = state.players.filter { it.isBot }
-    val occupant = state.players.firstOrNull { it.id == state.tokyoOccupantId }
+    val me = state.me
+    val opponents = state.opponents
+    val occupant = state.tokyoOccupant
 
     Box(
         modifier = Modifier
@@ -226,80 +225,73 @@ fun GameScreen(
             .padding(12.dp)
     ) {
         if (isPortrait) {
-            GameScreenPortrait(state, isBotFastForward, botExplanation, onEvent, tooltipMessage, { tooltipMessage = it }, { showSummary = true })
-        } else
-        Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            GameScreenPortrait(state, onEvent, tooltipMessage, { tooltipMessage = it }, { showSummary = true })
+        } else {
+            Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
 
-            Column(
-                modifier = Modifier.weight(0.28f).fillMaxHeight(),
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    opponents.forEach { bot ->
-                        PlayerCardCompact(
-                            player = bot,
-                            isOccupant = state.tokyoOccupantId == bot.id,
-                            isActive = state.activePlayer.id == bot.id,
-                            gains = state.lastResolutionGains[bot.id]
-                        )
-                    }
-                }
-                PlayerCardSelf(player = me, isOccupant = state.tokyoOccupantId == me.id, gains = state.lastResolutionGains[me.id])
-            }
-
-            Column(
-                modifier = Modifier.weight(0.42f).fillMaxHeight(),
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                TurnStatusPanel(state, onEvent)
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .background(NeonPalette.Surface, RoundedCornerShape(12.dp))
-                        .border(2.dp, NeonPalette.NeonCyan, RoundedCornerShape(12.dp))
-                        .padding(12.dp),
-                    contentAlignment = Alignment.Center
+                Column(
+                    modifier = Modifier.weight(0.28f).fillMaxHeight(),
+                    verticalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("LA TOUR CENTRALE", color = NeonPalette.NeonCyan, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
-                        Spacer(Modifier.height(8.dp))
-                        if (occupant != null) {
-                            Text("👑 ${occupant.monster.displayName}", color = NeonPalette.NeonPink, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                            Text("♥ ${occupant.hp}/10   ★ ${occupant.vp}/20", color = NeonPalette.TextPrimary, fontSize = 14.sp)
-                        } else {
-                            Text("ZONE LIBRE (+1 ★ à l'entrée)", color = NeonPalette.TextPrimary.copy(alpha = 0.7f), fontSize = 14.sp)
-                        }
-                        Spacer(Modifier.height(8.dp))
-                        if (state.decisionPlayer.isBot) {
-                            val result = state.lastResolutionGains[state.activePlayer.id]
-                            val explanation = if (state.phase == TurnPhase.ACHETER && result != null)
-                                "Résultat : +${result.vp} ★, +${result.energy} ⚡, +${result.healing} ♥, +${result.malice} Surcharge.\n${botExplanation.orEmpty()}"
-                                else botExplanation.orEmpty()
-                            BotTurnOverlay(state.decisionPlayer.monster.displayName, explanation, isBotFastForward,
-                                { onEvent(UiEvent.ToggleFastBot) })
-                        } else {
-                        Text("Résumé · toucher pour le détail", color = NeonPalette.NeonCyan, fontSize = 11.sp,
-                            modifier = Modifier.heightIn(min = 48.dp).clickable { showSummary = true })
-                        Text(
-                            text = state.resolutionSummary.takeLast(3).joinToString("\n"),
-                            color = NeonPalette.NeonCyan,
-                            fontSize = 12.sp,
-                            lineHeight = 15.sp,
-                            maxLines = 3
-                        )
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        opponents.forEach { bot ->
+                            PlayerCardCompact(player = bot)
                         }
                     }
+                    PlayerCardSelf(player = me)
                 }
-                Spacer(Modifier.height(8.dp))
-                SurchargeGaugeBar(malice = me.malice)
-            }
 
-            Column(
-                modifier = Modifier.weight(0.30f).fillMaxHeight(),
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                DiceTurnControls(state, onEvent) { tooltipMessage = it }
+                Column(
+                    modifier = Modifier.weight(0.42f).fillMaxHeight(),
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                    TurnStatusPanel(state, onEvent)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .background(NeonPalette.Surface, RoundedCornerShape(12.dp))
+                            .border(2.dp, NeonPalette.NeonCyan, RoundedCornerShape(12.dp))
+                            .padding(12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("LA TOUR CENTRALE", color = NeonPalette.NeonCyan, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+                            Spacer(Modifier.height(8.dp))
+                            if (occupant != null) {
+                                Text("👑 ${occupant.name}", color = NeonPalette.NeonPink, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                                Text("♥ ${occupant.hp}/10   ★ ${occupant.vp}/20", color = NeonPalette.TextPrimary, fontSize = 14.sp)
+                            } else {
+                                Text("ZONE LIBRE (+1 ★ à l'entrée)", color = NeonPalette.TextPrimary.copy(alpha = 0.7f), fontSize = 14.sp)
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            val botTurn = state.botTurn
+                            if (botTurn != null) {
+                                BotTurnOverlay(botTurn.botName, botTurn.lastAction, state.isBotFastForward,
+                                    { onEvent(UiEvent.ToggleFastBot) })
+                            } else {
+                            Text("Résumé · toucher pour le détail", color = NeonPalette.NeonCyan, fontSize = 11.sp,
+                                modifier = Modifier.heightIn(min = 48.dp).clickable { showSummary = true })
+                            Text(
+                                text = state.summary.takeLast(3).joinToString("\n"),
+                                color = NeonPalette.NeonCyan,
+                                fontSize = 12.sp,
+                                lineHeight = 15.sp,
+                                maxLines = 3
+                            )
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    SurchargeGaugeBar(malice = me.malice)
+                }
+
+                Column(
+                    modifier = Modifier.weight(0.30f).fillMaxHeight(),
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                    DiceTurnControls(state, onEvent) { tooltipMessage = it }
+                }
             }
         }
 
@@ -318,14 +310,14 @@ fun GameScreen(
 
         if (showSummary) {
             AlertDialog(onDismissRequest = { showSummary = false },
-                title = { Text("Résumé du tour — ${state.activePlayer.monster.displayName}") },
+                title = { Text("Résumé du tour — ${state.activePlayerName}") },
                 text = { Column(Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState())) {
-                    state.resolutionSummary.forEach { Text(it, color = NeonPalette.TextPrimary, fontSize = 13.sp, lineHeight = 18.sp) }
+                    state.summary.forEach { Text(it, color = NeonPalette.TextPrimary, fontSize = 13.sp, lineHeight = 18.sp) }
                 } },
                 confirmButton = { NeonButton("Fermer", onClick = { showSummary = false }) })
         }
 
-        state.toFleeUi()?.let { flee ->
+        state.flee?.let { flee ->
             FleeDialog(
                 flee = flee,
                 onFlee = { onEvent(UiEvent.DispatchGameAction(GameAction.Flee)) },
@@ -333,7 +325,7 @@ fun GameScreen(
             )
         }
 
-        state.toMalicePickUi()?.let { pick ->
+        state.malicePick?.let { pick ->
             MalicePickerSheet(
                 pick = pick,
                 onPickTile = { onEvent(UiEvent.DispatchGameAction(GameAction.PickMaliceTile(it))) }
@@ -343,7 +335,7 @@ fun GameScreen(
 }
 
 @Composable
-fun NeonDieView(die: Die, enabled: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+fun NeonDieView(die: DieUi, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val symbol = when (die.face) {
         DieFace.ONE -> "1"
         DieFace.TWO -> "2"
@@ -359,7 +351,7 @@ fun NeonDieView(die: Die, enabled: Boolean, modifier: Modifier = Modifier, onCli
             .semantics { contentDescription = "Dé ${die.id + 1}, face $symbol, ${if (die.isKept) "conservé, toucher pour relancer" else "à relancer, toucher pour conserver"}" }
             .background(NeonPalette.Surface, RoundedCornerShape(8.dp))
             .border(2.dp, borderColor, RoundedCornerShape(8.dp))
-            .clickable(enabled = enabled) { onClick() }
+            .clickable(enabled = die.canToggle) { onClick() }
             .padding(6.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -375,11 +367,11 @@ fun NeonDieView(die: Die, enabled: Boolean, modifier: Modifier = Modifier, onCli
 }
 
 @Composable
-fun PlayerCardCompact(player: PlayerState, isOccupant: Boolean, isActive: Boolean, stacked: Boolean = false, gains: ResolutionGains? = null) {
-    val border = if (isActive) NeonPalette.NeonPink else NeonPalette.NeonCyan.copy(alpha = 0.35f)
-    val name = "${if (!player.isAlive) "☠ " else if (isOccupant) "👑 " else ""}${player.monster.displayName}"
+fun PlayerCardCompact(player: PlayerUi, stacked: Boolean = false) {
+    val border = if (player.isActive) NeonPalette.NeonPink else NeonPalette.NeonCyan.copy(alpha = 0.35f)
+    val name = "${if (!player.isAlive) "☠ " else if (player.isInTokyo) "👑 " else ""}${player.name}"
     val stats = "♥${player.hp} ★${player.vp} ⚡${player.energy} S${player.malice}"
-    val gainsText = gains?.let { "Gains : +${it.vp} ★  +${it.energy} ⚡  +${it.healing} ♥" }
+    val gainsText = player.gains?.let { "Gains : +${it.vp} ★  +${it.energy} ⚡  +${it.healing} ♥" }
     val frame = Modifier.fillMaxWidth()
         .background(NeonPalette.Surface, RoundedCornerShape(8.dp))
         .border(1.dp, border, RoundedCornerShape(8.dp)).padding(8.dp)
@@ -401,7 +393,8 @@ fun PlayerCardCompact(player: PlayerState, isOccupant: Boolean, isActive: Boolea
 }
 
 @Composable
-fun PlayerCardSelf(player: PlayerState, isOccupant: Boolean, gains: ResolutionGains? = null) {
+fun PlayerCardSelf(player: PlayerUi) {
+    val gains = player.gains
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -410,7 +403,7 @@ fun PlayerCardSelf(player: PlayerState, isOccupant: Boolean, gains: ResolutionGa
             .padding(10.dp)
     ) {
         Text(
-            text = "${if (isOccupant) "👑 " else ""}${player.monster.displayName} (VOUS)",
+            text = "${if (player.isInTokyo) "👑 " else ""}${player.name} (VOUS)",
             color = NeonPalette.NeonPink,
             fontWeight = FontWeight.ExtraBold,
             fontSize = 14.sp
@@ -721,4 +714,13 @@ fun GameEndReason.label(): String = when (this) {
     GameEndReason.TWENTY_STARS -> "VICTOIRE PAR 20 ★"
     GameEndReason.LAST_SURVIVOR -> "DERNIER SURVIVANT"
     GameEndReason.ALL_ELIMINATED -> "TOUS ÉLIMINÉS"
+}
+
+fun BlockedReason.label(): String = when (this) {
+    BlockedReason.NO_ROLLS_LEFT -> "Plus de lancers disponibles"
+    BlockedReason.ALL_DICE_KEPT -> "Déverrouillez au moins un dé pour relancer"
+    BlockedReason.ROLLING_OVER -> "Vos lancers sont terminés pour ce tour"
+    BlockedReason.NOT_BUY_PHASE -> "Le Marché noir n'est accessible qu'en phase d'achat"
+    BlockedReason.RESOLVE_FIRST -> "Terminez d'abord la résolution de vos dés"
+    BlockedReason.BOT_PLAYING -> "Le bot joue"
 }

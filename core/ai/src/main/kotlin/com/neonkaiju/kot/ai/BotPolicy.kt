@@ -5,6 +5,7 @@ import com.neonkaiju.kot.model.*
 
 interface BotPolicy {
     fun chooseAction(state: GameState): GameAction
+    fun explainAction(state: GameState, action: GameAction): String = ""
 }
 
 /** Griffes qu'un adversaire inflige en moyenne en un tour, sur les 6 qu'il peut obtenir au maximum. */
@@ -31,7 +32,7 @@ class HeuristicBotPolicy : BotPolicy {
     }
 
     /** Explanations describe the same action that was selected, without consuming randomness. */
-    fun explainAction(state: GameState, action: GameAction): String {
+    override fun explainAction(state: GameState, action: GameAction): String {
         val name = state.decisionPlayer.monster.displayName
         val reason = when (action) {
             is GameAction.ToggleKeep -> {

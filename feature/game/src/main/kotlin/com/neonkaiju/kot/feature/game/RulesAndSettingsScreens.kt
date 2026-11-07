@@ -145,7 +145,8 @@ private fun RulesTab(title: String, isSelected: Boolean, modifier: Modifier, onC
 }
 
 @Composable
-fun SettingsScreen(fastBot: Boolean, onToggleFastBot: () -> Unit, onBack: () -> Unit) {
+fun SettingsScreen(state: SettingsUiState, onToggleFastBot: () -> Unit, onBack: () -> Unit) {
+    val fastBot = state.fastBots
     Column(
         modifier = Modifier
             .fillMaxSize()

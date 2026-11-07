@@ -12,23 +12,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.neonkaiju.kot.model.GameAction
-import com.neonkaiju.kot.model.GameState
-import com.neonkaiju.kot.model.TurnPhase
 
 @Composable
 fun GameScreenPortrait(
-    state: GameState,
-    isBotFastForward: Boolean,
-    botExplanation: String?,
+    state: GameUiState,
     onEvent: (UiEvent) -> Unit,
     tooltipMessage: String?,
     setTooltipMessage: (String?) -> Unit,
     onOpenSummary: () -> Unit
 ) {
-    val me = state.players.first { !it.isBot }
-    val opponents = state.players.filter { it.isBot }
-    val occupant = state.players.firstOrNull { it.id == state.tokyoOccupantId }
+    val me = state.me
+    val opponents = state.opponents
+    val occupant = state.tokyoOccupant
 
     Column(
         modifier = Modifier
@@ -46,19 +41,13 @@ fun GameScreenPortrait(
         ) {
             opponents.forEach { bot ->
                 Box(modifier = Modifier.weight(1f)) {
-                    PlayerCardCompact(
-                        player = bot,
-                        isOccupant = state.tokyoOccupantId == bot.id,
-                        isActive = state.activePlayer.id == bot.id,
-                        stacked = true,
-                        gains = state.lastResolutionGains[bot.id]
-                    )
+                    PlayerCardCompact(player = bot, stacked = true)
                 }
             }
         }
 
         // Middle Top: My Character
-        PlayerCardSelf(player = me, isOccupant = state.tokyoOccupantId == me.id, gains = state.lastResolutionGains[me.id])
+        PlayerCardSelf(player = me)
 
         // Middle: Central Tower
         Box(
@@ -74,24 +63,21 @@ fun GameScreenPortrait(
                 Text("LA TOUR CENTRALE", color = NeonPalette.NeonCyan, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
                 Spacer(Modifier.height(8.dp))
                 if (occupant != null) {
-                    Text("👑 ${occupant.monster.displayName}", color = NeonPalette.NeonPink, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    Text("👑 ${occupant.name}", color = NeonPalette.NeonPink, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                     Text("♥ ${occupant.hp}/10   ★ ${occupant.vp}/20", color = NeonPalette.TextPrimary, fontSize = 14.sp)
                 } else {
                     Text("ZONE LIBRE (+1 ★ à l'entrée)", color = NeonPalette.TextPrimary.copy(alpha = 0.7f), fontSize = 14.sp)
                 }
                 Spacer(Modifier.height(8.dp))
-                if (state.decisionPlayer.isBot) {
-                    val result = state.lastResolutionGains[state.activePlayer.id]
-                    val explanation = if (state.phase == com.neonkaiju.kot.model.TurnPhase.ACHETER && result != null)
-                        "Résultat : +${result.vp} ★, +${result.energy} ⚡, +${result.healing} ♥, +${result.malice} Surcharge.\n${botExplanation.orEmpty()}"
-                        else botExplanation.orEmpty()
-                    BotTurnOverlay(state.decisionPlayer.monster.displayName, explanation, isBotFastForward,
+                val botTurn = state.botTurn
+                if (botTurn != null) {
+                    BotTurnOverlay(botTurn.botName, botTurn.lastAction, state.isBotFastForward,
                         { onEvent(UiEvent.ToggleFastBot) })
                 } else {
                 Text("Résumé · toucher pour le détail", color = NeonPalette.NeonCyan, fontSize = 11.sp,
                     modifier = Modifier.heightIn(min = 48.dp).clickable(onClick = onOpenSummary))
                 Text(
-                    text = state.resolutionSummary.takeLast(3).joinToString("\n"),
+                    text = state.summary.takeLast(3).joinToString("\n"),
                     color = NeonPalette.NeonCyan,
                     fontSize = 12.sp,
                     lineHeight = 15.sp,
