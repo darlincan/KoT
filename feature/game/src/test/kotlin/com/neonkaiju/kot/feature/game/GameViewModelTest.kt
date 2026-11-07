@@ -1,7 +1,7 @@
 package com.neonkaiju.kot.feature.game
 
 import androidx.lifecycle.SavedStateHandle
-import com.neonkaiju.kot.ai.BotTurnPresenter
+import com.neonkaiju.kot.ai.BotPolicy
 import com.neonkaiju.kot.ai.HeuristicBotPolicy
 import com.neonkaiju.kot.content.CatalogData
 import com.neonkaiju.kot.content.CatalogLoader
@@ -63,7 +63,8 @@ class GameViewModelTest {
     private fun TestScope.viewModel(
         repository: GameRepository,
         settings: SettingsRepository = InMemorySettingsRepository(),
-    ) = GameViewModel(SavedStateHandle(), repository, FixedCatalog(), settings, HeuristicBotPolicy(), seedProvider = { 42L }, appVersion = "test")
+        policy: BotPolicy = HeuristicBotPolicy(),
+    ) = GameViewModel(SavedStateHandle(), repository, FixedCatalog(), settings, policy, seedProvider = { 42L }, appVersion = "test")
         .also { runCurrent() }
 
     private fun newGame() = GameEngine.createGame(seed = 7L, humanMonster = MonsterId.VOLTRAX, catalog = catalog)
@@ -102,7 +103,7 @@ class GameViewModelTest {
         advanceTimeBy(5_000)
         assertEquals(botTurn, viewModel.game.value, "aucun bot ne joue écran caché")
 
-        val delay = BotTurnPresenter().delayMillis(HeuristicBotPolicy().chooseAction(botTurn), fast = false)
+        val delay = botDelayMillis(HeuristicBotPolicy().chooseAction(botTurn), fast = false)
         viewModel.setBotsActive(true)
         advanceTimeBy(delay - 1)
         assertEquals(botTurn, viewModel.game.value, "l'action du bot reste visible au moins le délai prévu")
@@ -121,7 +122,7 @@ class GameViewModelTest {
         runCurrent()
         assertTrue(settings.settings.first().fastBots)
 
-        val delay = BotTurnPresenter().delayMillis(HeuristicBotPolicy().chooseAction(botTurn), fast = true)
+        val delay = botDelayMillis(HeuristicBotPolicy().chooseAction(botTurn), fast = true)
         viewModel.setBotsActive(true)
         advanceTimeBy(delay + 1)
         assertNotEquals(botTurn, viewModel.game.value)
@@ -158,6 +159,31 @@ class GameViewModelTest {
 
         val explanation = viewModel.gameUiState.value?.botTurn?.lastAction
         assertFalse(explanation.isNullOrBlank())
+        job.cancel()
+    }
+
+    @Test
+    fun `bot pacing leaves time to read and fast mode stays at 400 ms`() {
+        assertEquals(450L, botDelayMillis(GameAction.ToggleKeep(0), fast = false))
+        assertEquals(1800L, botDelayMillis(GameAction.Reroll, fast = false))
+        assertEquals(2200L, botDelayMillis(GameAction.EndTurn, fast = false))
+        assertEquals(400L, botDelayMillis(GameAction.EndTurn, fast = true))
+    }
+
+    @Test
+    fun `bot decides only once per state for the overlay and the move`() = runTest(dispatcher) {
+        var decisions = 0
+        val policy = object : BotPolicy {
+            private val delegate = HeuristicBotPolicy()
+            override fun chooseAction(state: GameState): GameAction { decisions++; return delegate.chooseAction(state) }
+        }
+        val botTurn = newGame().copy(activePlayerIndex = 1)
+        val viewModel = viewModel(InMemoryGameRepository(botTurn), policy = policy)
+        val job = backgroundScope.launch { viewModel.gameUiState.collect {} }
+        viewModel.setBotsActive(true)
+        runCurrent()
+
+        assertEquals(1, decisions)
         job.cancel()
     }
 

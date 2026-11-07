@@ -105,7 +105,7 @@ fun KotNavHost(
         composable<Route.Shop> {
             val state by gameViewModel.shopUiState.collectAsStateWithLifecycle()
             RequireGame(gameViewModel, onMissing = { navController.backToHome() })
-            BackHandler { navController.navigate(Route.Pause) }
+            // pas de BackHandler : le retour ferme le marché et revient au plateau.
             state?.let {
                 // Le marché se ferme si la décision passe à un bot.
                 LaunchedEffect(it.isBotTurn) { if (it.isBotTurn) navController.popBackStack() }
