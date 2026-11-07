@@ -110,7 +110,7 @@ Les boutons pleins portent donc un libellé sombre. Cette règle est vérifiée 
 | Build | Gradle 9.6 (wrapper) + version catalog | dépendances centralisées dans `libs.versions.toml` |
 | UI | Jetpack Compose + Material 3 | une seule description d'écran, pas de XML |
 | Architecture | MVVM : `ViewModel` + `StateFlow<UiState>`, Navigation Compose (routes typées) | l'état survit à la rotation ; les écrans ne calculent aucune règle |
-| Orientation | `landscape` verrouillée | `android:screenOrientation="landscape"` dans le manifeste |
+| Orientation | paysage verrouillé | `android:screenOrientation="sensorLandscape"` dans le manifeste : toujours en paysage, dans les deux sens (gauchers, câble de charge) |
 | Sérialisation | kotlinx.serialization | état de partie en JSON versionné (`GameState.CURRENT_VERSION`, migrations dans `FileGameRepository`) |
 | Injection | Hilt | permet d'injecter un générateur aléatoire fixe en test |
 | Persistance | DataStore (réglages) + fichier JSON (partie en cours) | pas de base de données nécessaire à ce périmètre |
