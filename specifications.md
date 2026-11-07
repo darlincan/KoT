@@ -104,13 +104,14 @@ Les boutons pleins portent donc un libellé sombre. Cette règle est vérifiée 
 | Paramètre | Valeur | Justification |
 | --- | --- | --- |
 | `minSdk` | **29** (Android 10) | imposé par l'énoncé ; `java.time` natif, thème sombre système, stockage cloisonné |
-| `targetSdk` / `compileSdk` | 36 | exigence Play Store, API récentes |
-| Langage | Kotlin 2.2 | `value class`, `sealed interface`, sérialisation |
-| JDK | **21** (toolchain Gradle) | LTS, aligné avec AGP 8.x |
-| Build | Gradle 8.x + version catalog | dépendances centralisées dans `libs.versions.toml` |
+| `targetSdk` / `compileSdk` | 35 | API récentes, stables avec AGP 8.7 |
+| Langage | Kotlin 2.1 | `value class`, `sealed interface`, sérialisation |
+| JDK | **21** (toolchain Gradle) | LTS, aligné avec AGP 8.x ; téléchargé automatiquement par Gradle (foojay) s'il manque |
+| Build | Gradle 9.6 (wrapper) + version catalog | dépendances centralisées dans `libs.versions.toml` |
 | UI | Jetpack Compose + Material 3 | une seule description d'écran, pas de XML |
+| Architecture | MVVM : `ViewModel` + `StateFlow<UiState>`, Navigation Compose (routes typées) | l'état survit à la rotation ; les écrans ne calculent aucune règle |
 | Orientation | `landscape` verrouillée | `android:screenOrientation="landscape"` dans le manifeste |
-| Sérialisation | kotlinx.serialization | état de partie en JSON versionné |
+| Sérialisation | kotlinx.serialization | état de partie en JSON versionné (`GameState.CURRENT_VERSION`, migrations dans `FileGameRepository`) |
 | Injection | Hilt | permet d'injecter un générateur aléatoire fixe en test |
 | Persistance | DataStore (réglages) + fichier JSON (partie en cours) | pas de base de données nécessaire à ce périmètre |
 
@@ -122,7 +123,8 @@ Les boutons pleins portent donc un libellé sombre. Cette règle est vérifiée 
 :core:engine      moteur de règles — Kotlin/JVM pur, zéro import android.*
 :core:content     catalogue JSON des cartes et tuiles + interpréteur d'effets
 :core:ai          politiques de décision des bots
-:feature:game     écrans Compose
+:core:data        repositories : partie en cours (JSON), catalogue, réglages (DataStore)
+:feature:game     écrans Compose, ViewModels, UiState
 ```
 
 Règle d'or : `:core:engine` ne dépend d'aucune API Android. Il se teste en JVM, sans émulateur, et c'est ce qui rend le moteur vérifiable dans le temps imparti.
