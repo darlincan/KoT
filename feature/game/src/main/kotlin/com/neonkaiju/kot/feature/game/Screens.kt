@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -21,6 +22,12 @@ import androidx.compose.ui.unit.sp
 import com.neonkaiju.kot.model.*
 import androidx.compose.ui.platform.LocalConfiguration
 import android.content.res.Configuration
+import android.view.accessibility.AccessibilityManager
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.delay
+
+/** Durée du compte à rebours optionnel de Fuir ou Rester (wireframe 05). */
+const val FLEE_COUNTDOWN_SECONDS = 6
 
 sealed interface UiEvent {
     data object NewGame : UiEvent
@@ -224,73 +231,77 @@ fun GameScreen(
             .systemBarsPadding()
             .padding(12.dp)
     ) {
-        if (isPortrait) {
-            GameScreenPortrait(state, onEvent, tooltipMessage, { tooltipMessage = it }, { showSummary = true })
-        } else {
-            Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        // Fuir ou Rester et le palier couvrent le plateau : TalkBack ne doit lire que la décision à prendre.
+        val boardHidden = state.flee != null || state.malicePick != null
+        Box(Modifier.fillMaxSize().then(if (boardHidden) Modifier.clearAndSetSemantics {} else Modifier)) {
+            if (isPortrait) {
+                GameScreenPortrait(state, onEvent, tooltipMessage, { tooltipMessage = it }, { showSummary = true })
+            } else {
+                Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
 
-                Column(
-                    modifier = Modifier.weight(0.28f).fillMaxHeight(),
-                    verticalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        opponents.forEach { bot ->
-                            PlayerCardCompact(player = bot)
-                        }
-                    }
-                    PlayerCardSelf(player = me)
-                }
-
-                Column(
-                    modifier = Modifier.weight(0.42f).fillMaxHeight(),
-                    verticalArrangement = Arrangement.SpaceBetween
-                ) {
-                    TurnStatusPanel(state, onEvent)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                            .background(NeonPalette.Surface, RoundedCornerShape(12.dp))
-                            .border(2.dp, NeonPalette.NeonCyan, RoundedCornerShape(12.dp))
-                            .padding(12.dp),
-                        contentAlignment = Alignment.Center
+                    Column(
+                        modifier = Modifier.weight(0.28f).fillMaxHeight(),
+                        verticalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("LA TOUR CENTRALE", color = NeonPalette.NeonCyan, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
-                            Spacer(Modifier.height(8.dp))
-                            if (occupant != null) {
-                                Text("👑 ${occupant.name}", color = NeonPalette.NeonPink, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                                Text("♥ ${occupant.hp}/10   ★ ${occupant.vp}/20", color = NeonPalette.TextPrimary, fontSize = 14.sp)
-                            } else {
-                                Text("ZONE LIBRE (+1 ★ à l'entrée)", color = NeonPalette.TextPrimary.copy(alpha = 0.7f), fontSize = 14.sp)
-                            }
-                            Spacer(Modifier.height(8.dp))
-                            val botTurn = state.botTurn
-                            if (botTurn != null) {
-                                BotTurnOverlay(botTurn.botName, botTurn.lastAction, state.isBotFastForward,
-                                    { onEvent(UiEvent.ToggleFastBot) })
-                            } else {
-                            Text("Résumé · toucher pour le détail", color = NeonPalette.NeonCyan, fontSize = 11.sp,
-                                modifier = Modifier.heightIn(min = 48.dp).clickable { showSummary = true })
-                            Text(
-                                text = state.summary.takeLast(3).joinToString("\n"),
-                                color = NeonPalette.NeonCyan,
-                                fontSize = 12.sp,
-                                lineHeight = 15.sp,
-                                maxLines = 3
-                            )
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            opponents.forEach { bot ->
+                                PlayerCardCompact(player = bot)
                             }
                         }
+                        PlayerCardSelf(player = me)
                     }
-                    Spacer(Modifier.height(8.dp))
-                    SurchargeGaugeBar(malice = me.malice)
-                }
 
-                Column(
-                    modifier = Modifier.weight(0.30f).fillMaxHeight(),
-                    verticalArrangement = Arrangement.SpaceBetween
-                ) {
-                    DiceTurnControls(state, onEvent) { tooltipMessage = it }
+                    Column(
+                        modifier = Modifier.weight(0.42f).fillMaxHeight(),
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        TurnStatusPanel(state, onEvent)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f)
+                                .background(NeonPalette.Surface, RoundedCornerShape(12.dp))
+                                .border(2.dp, NeonPalette.NeonCyan, RoundedCornerShape(12.dp))
+                                .padding(12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("LA TOUR CENTRALE", color = NeonPalette.NeonCyan, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+                                Spacer(Modifier.height(8.dp))
+                                if (occupant != null) {
+                                    Text("👑 ${occupant.name}", color = NeonPalette.NeonPink, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                                    Text("♥ ${occupant.hp}/10   ★ ${occupant.vp}/20", color = NeonPalette.TextPrimary, fontSize = 14.sp)
+                                } else {
+                                    Text("ZONE LIBRE (+1 ★ à l'entrée)", color = NeonPalette.TextPrimary.copy(alpha = 0.7f), fontSize = 14.sp)
+                                }
+                                Spacer(Modifier.height(8.dp))
+                                val botTurn = state.botTurn
+                                if (botTurn != null) {
+                                    BotTurnOverlay(botTurn.botName, botTurn.lastAction, state.isBotFastForward,
+                                        { onEvent(UiEvent.ToggleFastBot) })
+                                } else {
+                                Text("Résumé · toucher pour le détail", color = NeonPalette.NeonCyan, fontSize = 11.sp,
+                                    modifier = Modifier.heightIn(min = 48.dp).clickable { showSummary = true })
+                                Text(
+                                    text = state.summary.takeLast(3).joinToString("\n"),
+                                    color = NeonPalette.NeonCyan,
+                                    fontSize = 12.sp,
+                                    lineHeight = 15.sp,
+                                    maxLines = 3
+                                )
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        SurchargeGaugeBar(malice = me.malice)
+                    }
+
+                    Column(
+                        modifier = Modifier.weight(0.30f).fillMaxHeight(),
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        DiceTurnControls(state, onEvent) { tooltipMessage = it }
+                    }
                 }
             }
         }
@@ -320,6 +331,7 @@ fun GameScreen(
         state.flee?.let { flee ->
             FleeDialog(
                 flee = flee,
+                countdownEnabled = state.countdownEnabled,
                 onFlee = { onEvent(UiEvent.DispatchGameAction(GameAction.Flee)) },
                 onStay = { onEvent(UiEvent.DispatchGameAction(GameAction.Stay)) }
             )
@@ -336,6 +348,14 @@ fun GameScreen(
 
 @Composable
 fun NeonDieView(die: DieUi, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val faceName = when (die.face) {
+        DieFace.ONE -> "chiffre 1"
+        DieFace.TWO -> "chiffre 2"
+        DieFace.THREE -> "chiffre 3"
+        DieFace.ENERGY -> "éclair"
+        DieFace.CLAW -> "griffe"
+        DieFace.HEART -> "cœur"
+    }
     val symbol = when (die.face) {
         DieFace.ONE -> "1"
         DieFace.TWO -> "2"
@@ -348,7 +368,7 @@ fun NeonDieView(die: DieUi, modifier: Modifier = Modifier, onClick: () -> Unit) 
     Box(
         modifier = modifier
             .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
-            .semantics { contentDescription = "Dé ${die.id + 1}, face $symbol, ${if (die.isKept) "conservé, toucher pour relancer" else "à relancer, toucher pour conserver"}" }
+            .semantics { contentDescription = "Dé ${die.id + 1}, $faceName, ${if (die.isKept) "conservé, toucher pour relancer" else "à relancer, toucher pour conserver"}" }
             .background(NeonPalette.Surface, RoundedCornerShape(8.dp))
             .border(2.dp, borderColor, RoundedCornerShape(8.dp))
             .clickable(enabled = die.canToggle) { onClick() }
@@ -373,6 +393,7 @@ fun PlayerCardCompact(player: PlayerUi, stacked: Boolean = false) {
     val stats = "♥${player.hp} ★${player.vp} ⚡${player.energy} S${player.malice}"
     val gainsText = player.gains?.let { "Gains : +${it.vp} ★  +${it.energy} ⚡  +${it.healing} ♥" }
     val frame = Modifier.fillMaxWidth()
+        .semantics(mergeDescendants = true) { contentDescription = player.accessibilityLabel }
         .background(NeonPalette.Surface, RoundedCornerShape(8.dp))
         .border(1.dp, border, RoundedCornerShape(8.dp)).padding(8.dp)
     if (stacked) {
@@ -398,6 +419,7 @@ fun PlayerCardSelf(player: PlayerUi) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .semantics(mergeDescendants = true) { contentDescription = "Vous : ${player.accessibilityLabel}" }
             .background(NeonPalette.Surface, RoundedCornerShape(10.dp))
             .border(2.dp, NeonPalette.NeonPink, RoundedCornerShape(10.dp))
             .padding(10.dp)
@@ -477,9 +499,27 @@ fun BotTurnOverlay(
 @Composable
 fun FleeDialog(
     flee: FleeUi,
+    countdownEnabled: Boolean = false,
     onFlee: () -> Unit,
     onStay: () -> Unit
 ) {
+    val context = LocalContext.current
+    val talkBackActive = remember(context) {
+        context.getSystemService(AccessibilityManager::class.java)?.isTouchExplorationEnabled == true
+    }
+    val countdownRuns = countdownEnabled && !talkBackActive
+    var secondsLeft by remember(flee) { mutableIntStateOf(FLEE_COUNTDOWN_SECONDS) }
+    val latestOnStay by rememberUpdatedState(onStay)
+    if (countdownRuns) {
+        LaunchedEffect(flee) {
+            while (secondsLeft > 0) {
+                delay(1_000)
+                secondsLeft--
+            }
+            latestOnStay()
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -508,6 +548,9 @@ fun FleeDialog(
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                 NeonButton("Fuir la Tour", onClick = onFlee, accentColor = NeonPalette.NeonCyan, modifier = Modifier.weight(1f))
                 NeonButton("Rester", onClick = onStay, accentColor = NeonPalette.NeonPink, modifier = Modifier.weight(1f))
+            }
+            if (countdownRuns) {
+                Text("Sans réponse dans $secondsLeft s, vous restez", color = NeonPalette.TextPrimary, fontSize = 12.sp)
             }
         }
     }
@@ -612,7 +655,7 @@ private fun MaliceTileOffer(tile: TileUi, onPickTile: (String) -> Unit, modifier
             .padding(8.dp),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Column {
+        Column(Modifier.semantics(mergeDescendants = true) { contentDescription = "Pouvoir ${tile.name} : ${tile.text}" }) {
             Text(tile.name, color = NeonPalette.NeonPink, fontWeight = FontWeight.Bold, fontSize = 14.sp, lineHeight = 17.sp)
             Text(tile.text, color = NeonPalette.TextPrimary, fontSize = 12.sp, lineHeight = 15.sp)
         }

@@ -19,11 +19,14 @@ import java.io.IOException
 data class Settings(
     // Bots fast : 400ms
     val fastBots: Boolean = false,
+    // Compte à rebours sur Fuir ou Rester : désactivé par défaut (règle transverse n° 6).
+    val fleeCountdown: Boolean = false,
 )
 
 interface SettingsRepository {
     val settings: Flow<Settings>
     suspend fun setFastBots(enabled: Boolean)
+    suspend fun setFleeCountdown(enabled: Boolean)
 }
 
 /**
@@ -36,14 +39,19 @@ class DataStoreSettingsRepository(private val dataStore: DataStore<Preferences>)
 
     override val settings: Flow<Settings> = dataStore.data
         .catch { error -> if (error is IOException) emit(emptyPreferences()) else throw error }
-        .map { prefs -> Settings(fastBots = prefs[FAST_BOTS] ?: false) }
+        .map { prefs -> Settings(fastBots = prefs[FAST_BOTS] ?: false, fleeCountdown = prefs[FLEE_COUNTDOWN] ?: false) }
 
     override suspend fun setFastBots(enabled: Boolean) {
         dataStore.edit { it[FAST_BOTS] = enabled }
     }
 
+    override suspend fun setFleeCountdown(enabled: Boolean) {
+        dataStore.edit { it[FLEE_COUNTDOWN] = enabled }
+    }
+
     companion object {
         private val FAST_BOTS = booleanPreferencesKey("fast_bots")
+        private val FLEE_COUNTDOWN = booleanPreferencesKey("flee_countdown")
 
         // file doit se terminer par .preferences_pb
         fun create(

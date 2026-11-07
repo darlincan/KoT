@@ -7,6 +7,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -77,7 +78,8 @@ fun NeonButton(
     onDisabledLongPress: (String) -> Unit = {}
 ) {
     val bgColor = if (enabled) accentColor else NeonPalette.Surface
-    val textColor = if (enabled) NeonPalette.DarkLabel else NeonPalette.TextPrimary.copy(alpha = 0.45f)
+    // 0,55 : le libellé d'un bouton grisé garde un contraste d'au moins 4,5:1 sur la surface.
+    val textColor = if (enabled) NeonPalette.DarkLabel else NeonPalette.TextPrimary.copy(alpha = 0.55f)
 
     Box(
         modifier = modifier
@@ -85,7 +87,12 @@ fun NeonButton(
             .neonGlow(accentColor, active = enabled && Build.VERSION.SDK_INT >= 29)
             .background(bgColor, RoundedCornerShape(8.dp))
             .border(1.dp, if (enabled) accentColor else accentColor.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-            .semantics { if (!enabled) disabled() }
+            .semantics {
+                if (!enabled) {
+                    disabled()
+                    disabledReason?.let { stateDescription = it }
+                }
+            }
             .combinedClickable(
                 role = Role.Button,
                 onClick = { if (enabled) onClick() },

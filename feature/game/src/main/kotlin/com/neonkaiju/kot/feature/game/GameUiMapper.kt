@@ -71,7 +71,11 @@ internal fun GameState.toHomeUiState(version: String) = HomeUiState(
     version = version,
 )
 
-internal fun GameState.toGameUiState(isBotFastForward: Boolean, botExplanation: String? = null): GameUiState {
+internal fun GameState.toGameUiState(
+    isBotFastForward: Boolean,
+    botExplanation: String? = null,
+    countdownEnabled: Boolean = false,
+): GameUiState {
     val legal = humanLegalActions()
     val human = players.first { !it.isBot }
     val botDecides = decisionPlayer.isBot
@@ -123,6 +127,7 @@ internal fun GameState.toGameUiState(isBotFastForward: Boolean, botExplanation: 
         flee = toFleeUi(),
         malicePick = toMalicePickUi(),
         isBotFastForward = isBotFastForward,
+        countdownEnabled = countdownEnabled,
     )
 }
 

@@ -12,20 +12,27 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-data class SettingsUiState(val fastBots: Boolean = false)
+data class SettingsUiState(val fastBots: Boolean = false, val fleeCountdown: Boolean = false)
 
 /** ecran settings : lit et modifie les réglages persistés. */
 @HiltViewModel
 class SettingsViewModel @Inject constructor(private val settingsRepository: SettingsRepository) : ViewModel() {
 
     val uiState: StateFlow<SettingsUiState> = settingsRepository.settings
-        .map { SettingsUiState(fastBots = it.fastBots) }
+        .map { SettingsUiState(fastBots = it.fastBots, fleeCountdown = it.fleeCountdown) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
     fun toggleFastBots() {
         viewModelScope.launch {
             val current = settingsRepository.settings.first().fastBots
             settingsRepository.setFastBots(!current)
+        }
+    }
+
+    fun toggleFleeCountdown() {
+        viewModelScope.launch {
+            val current = settingsRepository.settings.first().fleeCountdown
+            settingsRepository.setFleeCountdown(!current)
         }
     }
 }
