@@ -172,7 +172,19 @@ data class GameState(
     val shop: List<CardDef> = emptyList(),
     val availableTiles: List<MaliceTileDef> = emptyList(),
     val winnerId: Int? = null,
-    val actionLog: List<String> = emptyList()
+    val actionLog: List<String> = emptyList(),
+    val history: List<GameAction> = emptyList()
 ) {
     val activePlayer: PlayerState get() = players[activePlayerIndex]
 }
+
+/**
+ * Journal d'une partie : de quoi la rejouer à l'identique.
+ * La graine fixe tout le hasard, le monstre du joueur fixe la mise en place, les actions font le reste.
+ */
+@Serializable
+data class GameJournal(
+    val seed: Long,
+    val humanMonster: MonsterId,
+    val actions: List<GameAction>
+)
