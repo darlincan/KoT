@@ -14,6 +14,7 @@ tasks.withType<Test> {
 dependencies {
     api(project(":core:model"))
     testImplementation(libs.junit.jupiter.api)
+    testImplementation(libs.json.schema.validator)
     testRuntimeOnly(libs.junit.jupiter.engine)
     testRuntimeOnly(libs.junit.platform.launcher)
 }

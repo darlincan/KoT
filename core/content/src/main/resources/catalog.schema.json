@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Catalogue Néon Kaiju",
+  "description": "Cartes et tuiles Méchanceté (§8 de la spécification). Les règles qu'un schéma ne peut pas exprimer (identifiants uniques, conditions, déclencheurs imposés) sont vérifiées par CatalogValidator.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["cards", "tiles"],
+  "properties": {
+    "cards": {
+      "type": "array",
+      "minItems": 20,
+      "maxItems": 20,
+      "items": { "$ref": "#/$defs/card" }
+    },
+    "tiles": {
+      "type": "array",
+      "minItems": 10,
+      "maxItems": 10,
+      "items": { "$ref": "#/$defs/tile" }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "effects": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/effect" }
+    },
+    "card": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "nom", "cout", "type", "texte", "effets"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "nom": { "$ref": "#/$defs/text" },
+        "cout": { "type": "integer", "minimum": 1 },
+        "type": { "enum": ["POUVOIR", "ACTION"] },
+        "texte": { "$ref": "#/$defs/text" },
+        "effets": { "$ref": "#/$defs/effects" }
+      }
+    },
+    "tile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "nom", "niveau", "texte", "effets"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "nom": { "$ref": "#/$defs/text" },
+        "niveau": { "enum": [3, 6, 10] },
+        "texte": { "$ref": "#/$defs/text" },
+        "effets": { "$ref": "#/$defs/effects" }
+      }
+    },
+    "effect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["declencheur", "cible", "operation"],
+      "properties": {
+        "declencheur": {
+          "enum": [
+            "ACHAT", "DEBUT_TOUR", "AVANT_LANCER", "APRES_RESOLUTION", "AVANT_DEGAT_SUBI",
+            "APRES_DEGAT_INFLIGE", "ENTREE_TOKYO", "FIN_TOUR", "PERMANENT"
+          ]
+        },
+        "condition": { "type": ["string", "null"] },
+        "cible": {
+          "enum": ["SOI", "ACTIF", "TOUS", "AUTRES", "OCCUPANT", "HORS_TOKYO", "VOISINS"]
+        },
+        "operation": {
+          "enum": [
+            "gainVp", "gainEnergy", "gainHp", "dealDamage", "annulerDegat",
+            "modifyCost", "rerollDice", "changerFace", "setFlag"
+          ]
+        },
+        "valeur": { "type": "integer", "default": 0 }
+      }
+    }
+  }
+}
