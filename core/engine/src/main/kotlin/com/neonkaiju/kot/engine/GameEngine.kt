@@ -109,11 +109,8 @@ object GameEngine {
             throw IllegalActionException("Action $action illégale dans la phase ${state.phase}. Actions permises : $allowed")
         }
 
-        if (action is GameAction.PickMaliceTile) {
-            return handlePickMaliceTile(state, action.tileId)
-        }
-
-        return when (action) {
+        val next = when (action) {
+            is GameAction.PickMaliceTile -> handlePickMaliceTile(state, action.tileId)
             is GameAction.ToggleKeep -> {
                 val newDice = state.dice.map {
                     if (it.id == action.dieId) it.copy(isKept = !it.isKept) else it
@@ -146,9 +143,22 @@ object GameEngine {
             is GameAction.BuyCard -> handleBuyCard(state, action.cardId)
             is GameAction.SweepShop -> handleSweepShop(state)
             is GameAction.EndTurn -> handleEndTurn(state)
-            else -> state
         }
+        return next.copy(history = state.history + action)
     }
+
+    fun journalOf(state: GameState): GameJournal = GameJournal(
+        seed = state.rng.seed,
+        humanMonster = state.players.first { !it.isBot }.monster,
+        actions = state.history
+    )
+
+    /**
+     * Rejoue une partie depuis sa graine. Chaque action repasse par [reduce] :
+     * un journal falsifié ou issu d'une autre version des règles lève [IllegalActionException].
+     */
+    fun replay(journal: GameJournal, catalog: CatalogData): GameState =
+        journal.actions.fold(createGame(journal.seed, journal.humanMonster, catalog), ::reduce)
 
     private fun transitionToResolve(rolledState: GameState): GameState {
         val state = EffectInterpreter.applyFaceChanges(rolledState, rolledState.activePlayer.id)
