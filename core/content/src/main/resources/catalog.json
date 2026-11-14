@@ -169,7 +169,7 @@
       "nom": "Canon Railgun",
       "cout": 7,
       "type": "ACTION",
-      "texte": "Gagnez 3 ★ et infligez 2 dégâts à tous les monstres hors de la Tour.",
+      "texte": "Gagnez 3 ★ et infligez 2 dégâts à tous les autres monstres hors de la Tour.",
       "effets": [
         { "declencheur": "ACHAT", "cible": "SOI", "operation": "gainVp", "valeur": 3 },
         { "declencheur": "ACHAT", "cible": "HORS_TOKYO", "operation": "dealDamage", "valeur": 2 }

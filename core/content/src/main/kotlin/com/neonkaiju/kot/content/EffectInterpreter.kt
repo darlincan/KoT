@@ -17,50 +17,15 @@ object CatalogLoader {
         val stream = CatalogLoader::class.java.getResourceAsStream("/catalog.json")
             ?: error("catalog.json introuvable")
         val text = stream.bufferedReader().use { it.readText() }
-        return json.decodeFromString<CatalogData>(text)
+        return parse(text)
     }
-}
 
-object ConditionParser {
-    fun evaluate(condition: String?, state: GameState, ownerId: Int): Boolean {
-        if (condition.isNullOrBlank()) return true
-        val player = state.players.first { it.id == ownerId }
-        val parts = condition.trim().split(" ")
-        require(parts.size == 3) { "Condition invalide : $condition" }
-        val (lhs, op, rhs) = parts
-
-        val leftVal: Any = when (lhs) {
-            "degatsSubisCeTour" -> player.damageTakenThisTurn
-            "estDansTokyo" -> (state.tokyoOccupantId == ownerId)
-            "energie" -> player.energy
-            "hp" -> player.hp
-            "vp" -> player.vp
-            else -> error("Variable de condition inconnue : $lhs")
-        }
-
-        return when (leftVal) {
-            is Boolean -> {
-                val rightBool = rhs.toBooleanStrict()
-                when (op) {
-                    "==" -> leftVal == rightBool
-                    "!=" -> leftVal != rightBool
-                    else -> error("Opérateur booléen inconnu : $op")
-                }
-            }
-            is Int -> {
-                val rightInt = rhs.toInt()
-                when (op) {
-                    "==" -> leftVal == rightInt
-                    "!=" -> leftVal != rightInt
-                    ">=" -> leftVal >= rightInt
-                    "<=" -> leftVal <= rightInt
-                    ">" -> leftVal > rightInt
-                    "<" -> leftVal < rightInt
-                    else -> error("Opérateur entier inconnu : $op")
-                }
-            }
-            else -> false
-        }
+    /** Décode puis valide : un catalogue invalide ne peut pas être chargé. */
+    fun parse(text: String): CatalogData {
+        val catalog = json.decodeFromString<CatalogData>(text)
+        val errors = CatalogValidator.validate(catalog)
+        if (errors.isNotEmpty()) throw InvalidCatalogException(errors)
+        return catalog
     }
 }
 
@@ -86,17 +51,39 @@ object EffectInterpreter {
             .sumOf { it.valeur }
     }
 
-    fun applyTrigger(state: GameState, trigger: EffectTrigger, ownerId: Int, explicitEffects: List<EffectDef>? = null): GameState {
+    /**
+     * Les changements de face s'appliquent quand les dés sont figés, avant le décompte des symboles :
+     * appliqués après la résolution, ils n'auraient aucun effet.
+     */
+    fun applyFaceChanges(state: GameState, ownerId: Int): GameState {
+        val owner = state.players.firstOrNull { it.id == ownerId } ?: return state
+        val effects = (owner.cards.flatMap { it.effets } + owner.tiles.flatMap { it.effets })
+            .filter { it.operation == EffectOperation.changerFace }
+        return if (effects.isEmpty()) state else applyTrigger(state, EffectTrigger.APRES_RESOLUTION, ownerId, effects)
+    }
+
+    /**
+     * Applique les effets [trigger] du propriétaire. [restrictTo], s'il est fourni, limite les cibles
+     * (par exemple aux monstres réellement blessés pour APRES_DEGAT_INFLIGE).
+     */
+    fun applyTrigger(
+        state: GameState,
+        trigger: EffectTrigger,
+        ownerId: Int,
+        explicitEffects: List<EffectDef>? = null,
+        restrictTo: Set<Int>? = null
+    ): GameState {
         val owner = state.players.firstOrNull { it.id == ownerId } ?: return state
         if (!owner.isAlive) return state
 
         val effects = explicitEffects ?: (owner.cards.flatMap { it.effets } + owner.tiles.flatMap { it.effets })
-            .filter { it.declencheur == trigger }
+            .filter { it.declencheur == trigger && it.operation != EffectOperation.changerFace }
 
         var current = state
         for (effect in effects) {
             if (!ConditionParser.evaluate(effect.condition, current, ownerId)) continue
             val targetIds = resolveTargets(current, ownerId, effect.cible)
+                .filter { restrictTo == null || it in restrictTo }
             for (targetId in targetIds) {
                 current = executeOperation(current, ownerId, targetId, effect)
             }
@@ -112,7 +99,8 @@ object EffectInterpreter {
             EffectTarget.TOUS -> alivePlayers.map { it.id }
             EffectTarget.AUTRES -> alivePlayers.filter { it.id != ownerId }.map { it.id }
             EffectTarget.OCCUPANT -> listOfNotNull(state.tokyoOccupantId)
-            EffectTarget.HORS_TOKYO -> alivePlayers.filter { it.id != state.tokyoOccupantId }.map { it.id }
+            // Comme AUTRES, HORS_TOKYO exclut le propriétaire : une carte ne se retourne pas contre son acheteur.
+            EffectTarget.HORS_TOKYO -> alivePlayers.filter { it.id != state.tokyoOccupantId && it.id != ownerId }.map { it.id }
             EffectTarget.VOISINS -> {
                 val aliveIds = alivePlayers.map { it.id }
                 val idx = aliveIds.indexOf(ownerId)
@@ -149,12 +137,14 @@ object EffectInterpreter {
                 } else state
             }
             EffectOperation.changerFace -> {
-                val idx = state.dice.indexOfFirst { it.face == DieFace.ONE }
-                if (idx != -1) {
-                    val updated = state.dice.toMutableList()
-                    updated[idx] = updated[idx].copy(face = DieFace.CLAW)
-                    state.copy(dice = updated)
-                } else state
+                if (targetId != state.activePlayer.id) return state
+                var remaining = effect.valeur
+                state.copy(dice = state.dice.map { die ->
+                    if (remaining > 0 && die.face == DieFace.ONE) {
+                        remaining--
+                        die.copy(face = DieFace.CLAW)
+                    } else die
+                })
             }
             EffectOperation.setFlag -> updatePlayer(state, targetId) {
                 it.copy(flags = it.flags + "FLAG_${effect.valeur}")
