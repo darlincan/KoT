@@ -150,7 +150,8 @@ object GameEngine {
         }
     }
 
-    private fun transitionToResolve(state: GameState): GameState {
+    private fun transitionToResolve(rolledState: GameState): GameState {
+        val state = EffectInterpreter.applyFaceChanges(rolledState, rolledState.activePlayer.id)
         val presentTypes = mutableSetOf<SymbolResolutionType>()
         val counts = state.dice.groupingBy { it.face }.eachCount()
         if ((counts[DieFace.ONE] ?: 0) >= 3 || (counts[DieFace.TWO] ?: 0) >= 3 || (counts[DieFace.THREE] ?: 0) >= 3) {
@@ -221,12 +222,20 @@ object GameEngine {
                 if (claws > 0) {
                     if (current.tokyoOccupantId == active.id) {
                         val targets = current.players.filter { it.isAlive && it.id != active.id }.map { it.id }
+                        val wounded = mutableSetOf<Int>()
                         for (tid in targets) {
                             val reduction = EffectInterpreter.computeDamageReduction(current, tid)
                             val dmg = (claws - reduction).coerceAtLeast(0)
-                            current = EffectInterpreter.applyDirectDamage(current, tid, dmg)
+                            if (dmg > 0) {
+                                current = EffectInterpreter.applyDirectDamage(current, tid, dmg)
+                                wounded += tid
+                            }
                         }
-                        current = EffectInterpreter.applyTrigger(current, EffectTrigger.APRES_DEGAT_INFLIGE, active.id)
+                        if (wounded.isNotEmpty()) {
+                            current = EffectInterpreter.applyTrigger(
+                                current, EffectTrigger.APRES_DEGAT_INFLIGE, active.id, restrictTo = wounded
+                            )
+                        }
                         current = current.copy(actionLog = current.actionLog + "${active.monster.displayName} frappe toute la ville ($claws 🐾)")
                     } else {
                         val occupantId = current.tokyoOccupantId
@@ -235,7 +244,9 @@ object GameEngine {
                             val dmg = (claws - reduction).coerceAtLeast(0)
                             if (dmg > 0) {
                                 current = EffectInterpreter.applyDirectDamage(current, occupantId, dmg)
-                                current = EffectInterpreter.applyTrigger(current, EffectTrigger.APRES_DEGAT_INFLIGE, active.id)
+                                current = EffectInterpreter.applyTrigger(
+                                    current, EffectTrigger.APRES_DEGAT_INFLIGE, active.id, restrictTo = setOf(occupantId)
+                                )
                                 val occupantAfter = current.players.first { it.id == occupantId }
                                 if (occupantAfter.isAlive) {
                                     return current.copy(
@@ -334,7 +345,7 @@ object GameEngine {
             current = EffectInterpreter.applyTrigger(current, EffectTrigger.ENTREE_TOKYO, activeId)
         }
 
-        return current.copy(phase = TurnPhase.ACHETER)
+        return checkImmediateElimination(current.copy(phase = TurnPhase.ACHETER))
     }
 
     private fun handleBuyCard(state: GameState, cardId: String): GameState {
@@ -437,6 +448,8 @@ object GameEngine {
         }
 
         current = EffectInterpreter.applyTrigger(current, EffectTrigger.DEBUT_TOUR, nextPlayerId)
+        current = checkImmediateElimination(current)
+        if (current.phase == TurnPhase.FIN_PARTIE) return current
 
         var rng = current.rng
         val freshDice = (0 until 6).map { id ->
