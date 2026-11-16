@@ -200,7 +200,7 @@ class GameViewModelTest {
 
     @Test
     fun `bot pacing leaves time to read and fast mode stays at 400 ms`() {
-        assertEquals(450L, botDelayMillis(GameAction.ToggleKeep(0), fast = false))
+        assertEquals(900L, botDelayMillis(GameAction.ToggleKeep(0), fast = false))
         assertEquals(1800L, botDelayMillis(GameAction.Reroll, fast = false))
         assertEquals(2200L, botDelayMillis(GameAction.EndTurn, fast = false))
         assertEquals(400L, botDelayMillis(GameAction.EndTurn, fast = true))

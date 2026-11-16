@@ -12,7 +12,8 @@ internal data class BotPlan(val state: GameState, val action: GameAction, val ex
  */
 internal fun botDelayMillis(action: GameAction, fast: Boolean): Long = when {
     fast -> 400L
-    action is GameAction.ToggleKeep -> 450L
+    // Chaque dé gardé reste visible assez longtemps pour suivre le choix du bot.
+    action is GameAction.ToggleKeep -> 900L
     action == GameAction.EndTurn -> 2200L // laisse le résultat du tour à l'écran avant de changer de joueur.
     else -> 1800L // lancers, résolution, achats et décisions de la Tour.
 }
