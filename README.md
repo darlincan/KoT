@@ -64,6 +64,23 @@ acceptée par `reduce` est ajoutée à `GameState.history`.
   liste des actions. Il est à joindre à tout rapport de bug.
 - `GameEngine.replay(journal, catalog)` rejoue la partie et reconstruit exactement le même état.
 
+## Bots
+
+Les 3 adversaires utilisent la même politique, `HeuristicBotPolicy` (`:core:ai`). Elle ne choisit que
+parmi `legalActions` et le `GameViewModel` la joue avec une pause d'au moins 400 ms par action.
+
+- **Évaluation** : `StateEvaluator` note un état pour un joueur (★, ♥, Cellules, Surcharge, Tour, pouvoirs
+  possédés, menace des adversaires).
+- **Dés** : garde les Cellules, les griffes (toujours dans la Tour ; dehors, s'il a assez de ♥ ou de quoi
+  éliminer l'occupant), les ♥ s'il est blessé hors de la Tour, les brelans et la meilleure paire.
+- **Achats** : simule chaque achat avec `reduce` et prend celui qui améliore le plus l'évaluation.
+- **Tuiles** : prend la tuile au pouvoir le plus fort du niveau.
+- **Fuir ou Rester** : fuit si les griffes attendues avant son prochain tour peuvent l'éliminer, sauf si
+  les 2 ★ du début de tour le font gagner.
+
+`BotPolicyTest` joue 200 parties entre bots (aucune action illégale, chaque partie se termine) et vérifie
+que le bot bat nettement un joueur aléatoire.
+
 ## Cartes et tuiles
 
 Les 20 cartes et les 10 tuiles Méchanceté sont des **données**, dans

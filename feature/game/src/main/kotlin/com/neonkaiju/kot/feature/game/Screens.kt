@@ -208,12 +208,17 @@ fun GameScreen(
 
     val isPortrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
     if (isPortrait) {
-        GameScreenPortrait(
-            state = state,
-            onEvent = onEvent,
-            tooltipMessage = tooltipMessage,
-            setTooltipMessage = { tooltipMessage = it }
-        )
+        // Les surcouches (Fuir ou Rester, tuile de Surcharge, tour d'un bot) doivent exister dans les deux
+        // orientations : sans elles, une décision attendue de l'humain bloque la partie.
+        Box(modifier = Modifier.fillMaxSize()) {
+            GameScreenPortrait(
+                state = state,
+                onEvent = onEvent,
+                tooltipMessage = tooltipMessage,
+                setTooltipMessage = { tooltipMessage = it }
+            )
+            GameOverlays(state, onEvent, tooltipMessage, setTooltipMessage = { tooltipMessage = it })
+        }
         return
     }
 
@@ -357,46 +362,57 @@ fun GameScreen(
             }
         }
 
-        tooltipMessage?.let { msg ->
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .background(NeonPalette.Surface, RoundedCornerShape(8.dp))
-                    .border(1.dp, NeonPalette.NeonPink, RoundedCornerShape(8.dp))
-                    .clickable { tooltipMessage = null }
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                Text(msg, color = NeonPalette.TextPrimary, fontSize = 13.sp)
-            }
-        }
+        GameOverlays(state, onEvent, tooltipMessage, setTooltipMessage = { tooltipMessage = it })
+    }
+}
 
-        state.botTurn?.let { botTurn ->
-            BotTurnOverlay(
-                botName = botTurn.botName,
-                lastAction = botTurn.lastAction,
-                isFast = state.isBotFastForward,
-                onToggleFast = { onEvent(UiEvent.ToggleFastBot) },
-                modifier = Modifier.align(Alignment.TopCenter)
-            )
+/** Surcouches communes aux deux orientations de l'écran de jeu. */
+@Composable
+private fun BoxScope.GameOverlays(
+    state: GameUiState,
+    onEvent: (UiEvent) -> Unit,
+    tooltipMessage: String?,
+    setTooltipMessage: (String?) -> Unit,
+) {
+    tooltipMessage?.let { msg ->
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .background(NeonPalette.Surface, RoundedCornerShape(8.dp))
+                .border(1.dp, NeonPalette.NeonPink, RoundedCornerShape(8.dp))
+                .clickable { setTooltipMessage(null) }
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            Text(msg, color = NeonPalette.TextPrimary, fontSize = 13.sp)
         }
+    }
 
-        state.flee?.let { flee ->
-            FleeDialog(
-                attackerName = flee.attackerName,
-                damageTaken = flee.damageTaken,
-                remainingHp = flee.remainingHp,
-                onFlee = { onEvent(UiEvent.DispatchGameAction(GameAction.Flee)) },
-                onStay = { onEvent(UiEvent.DispatchGameAction(GameAction.Stay)) }
-            )
-        }
+    state.botTurn?.let { botTurn ->
+        BotTurnOverlay(
+            botName = botTurn.botName,
+            lastAction = botTurn.lastAction,
+            isFast = state.isBotFastForward,
+            onToggleFast = { onEvent(UiEvent.ToggleFastBot) },
+            modifier = Modifier.align(Alignment.TopCenter)
+        )
+    }
 
-        state.malicePick?.let { pick ->
-            MalicePickerSheet(
-                level = pick.level,
-                availableTiles = pick.tiles,
-                onPickTile = { onEvent(UiEvent.DispatchGameAction(GameAction.PickMaliceTile(it))) }
-            )
-        }
+    state.flee?.let { flee ->
+        FleeDialog(
+            attackerName = flee.attackerName,
+            damageTaken = flee.damageTaken,
+            remainingHp = flee.remainingHp,
+            onFlee = { onEvent(UiEvent.DispatchGameAction(GameAction.Flee)) },
+            onStay = { onEvent(UiEvent.DispatchGameAction(GameAction.Stay)) }
+        )
+    }
+
+    state.malicePick?.let { pick ->
+        MalicePickerSheet(
+            level = pick.level,
+            availableTiles = pick.tiles,
+            onPickTile = { onEvent(UiEvent.DispatchGameAction(GameAction.PickMaliceTile(it))) }
+        )
     }
 }
 

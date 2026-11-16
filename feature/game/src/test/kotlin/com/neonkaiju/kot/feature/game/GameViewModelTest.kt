@@ -12,6 +12,7 @@ import com.neonkaiju.kot.engine.GameEngine
 import com.neonkaiju.kot.model.GameAction
 import com.neonkaiju.kot.model.GameState
 import com.neonkaiju.kot.model.MonsterId
+import com.neonkaiju.kot.model.TurnPhase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -131,5 +132,40 @@ class GameViewModelTest {
         viewModel.dispatch(GameAction.BuyCard(game.shop.first().id))
 
         assertEquals(game, viewModel.game.value)
+    }
+
+    @Test
+    fun `after the human ends the turn, the bots play until it is the human's turn again`() = runTest(dispatcher) {
+        for (seed in 1L..30L) {
+            val viewModel = viewModel(InMemoryGameRepository(GameEngine.createGame(seed, MonsterId.VOLTRAX, catalog)))
+            viewModel.setBotsActive(true)
+            runCurrent()
+            // Tour de l'humain : on s'arrête de lancer, on résout tout, on finit le tour.
+            viewModel.dispatch(GameAction.StopRolling)
+            while (true) {
+                val g = viewModel.game.value!!
+                if (g.phase == TurnPhase.FIN_PARTIE) break
+                val legal = GameEngine.legalActions(g)
+                val next = legal.firstOrNull { it is GameAction.PickMaliceTile || it is GameAction.ResolveSymbols || it == GameAction.Stay }
+                    ?: GameAction.EndTurn.takeIf { it in legal } ?: break
+                viewModel.dispatch(next)
+                if (next == GameAction.EndTurn) break
+            }
+            var steps = 0
+            while (steps++ < 2_000) {
+                val g = viewModel.game.value!!
+                if (g.phase == TurnPhase.FIN_PARTIE) break
+                if (!g.awaitsBot()) {
+                    if (g.pendingFlee != null) { viewModel.dispatch(GameAction.Stay); continue }
+                    break
+                }
+                advanceTimeBy(GameViewModel.BOT_DELAY_MS + 1)
+            }
+            val g = viewModel.game.value!!
+            assertTrue(
+                g.phase == TurnPhase.FIN_PARTIE || (g.activePlayer.id == 0 && g.phase == TurnPhase.LANCER),
+                "graine $seed : bloqué en ${g.phase}, actif ${g.activePlayer.id}, dernier log ${g.actionLog.lastOrNull()}"
+            )
+        }
     }
 }
