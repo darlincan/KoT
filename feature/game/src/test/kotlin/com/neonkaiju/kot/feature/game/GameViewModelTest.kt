@@ -10,9 +10,11 @@ import com.neonkaiju.kot.data.GameRepository
 import com.neonkaiju.kot.data.Settings
 import com.neonkaiju.kot.data.SettingsRepository
 import com.neonkaiju.kot.engine.GameEngine
+import com.neonkaiju.kot.model.DieFace
 import com.neonkaiju.kot.model.GameAction
 import com.neonkaiju.kot.model.GameState
 import com.neonkaiju.kot.model.MonsterId
+import com.neonkaiju.kot.model.TurnPhase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -53,6 +55,17 @@ class GameViewModelTest {
         override val settings: Flow<Settings> = state
         override suspend fun setFastBots(enabled: Boolean) { state.value = state.value.copy(fastBots = enabled) }
         override suspend fun setFleeCountdown(enabled: Boolean) { state.value = state.value.copy(fleeCountdown = enabled) }
+        override suspend fun setMusicEnabled(enabled: Boolean) { state.value = state.value.copy(musicEnabled = enabled) }
+        override suspend fun setSfxEnabled(enabled: Boolean) { state.value = state.value.copy(sfxEnabled = enabled) }
+    }
+
+    private class FakeSoundPlayer : SoundPlayer {
+        val played = mutableListOf<SoundEffect>()
+        var musicEnabled: Boolean? = null
+        override fun play(effect: SoundEffect) { played += effect }
+        override fun setMusicEnabled(enabled: Boolean) { musicEnabled = enabled }
+        override fun onForeground() = Unit
+        override fun onBackground() = Unit
     }
 
     @BeforeEach
@@ -64,7 +77,8 @@ class GameViewModelTest {
     private fun TestScope.viewModel(
         repository: GameRepository,
         settings: SettingsRepository = InMemorySettingsRepository(),
-    ) = GameViewModel(SavedStateHandle(), repository, FixedCatalog(), settings, HeuristicBotPolicy(), seedProvider = { 42L }, appVersion = "test")
+        sound: SoundPlayer = FakeSoundPlayer(),
+    ) = GameViewModel(SavedStateHandle(), repository, FixedCatalog(), settings, HeuristicBotPolicy(), seedProvider = { 42L }, appVersion = "test", soundPlayer = sound)
         .also { runCurrent() }
 
     private fun newGame() = GameEngine.createGame(seed = 7L, humanMonster = MonsterId.VOLTRAX, catalog = catalog)
@@ -174,6 +188,64 @@ class GameViewModelTest {
         runCurrent()
 
         assertEquals(true, viewModel.gameUiState.value?.countdownEnabled)
+    }
+
+    @Test
+    fun `reroll plays the dice sound`() = runTest(dispatcher) {
+        val sound = FakeSoundPlayer()
+        val viewModel = viewModel(InMemoryGameRepository(newGame()), sound = sound)
+
+        viewModel.dispatch(GameAction.Reroll)
+
+        assertEquals(listOf(SoundEffect.DICE), sound.played)
+    }
+
+    @Test
+    fun `claws on the occupant play the damage sound`() = runTest(dispatcher) {
+        val sound = FakeSoundPlayer()
+        val game = newGame()
+        val claws = game.copy(tokyoOccupantId = game.players[1].id, dice = game.dice.map { it.copy(face = DieFace.CLAW) })
+        val viewModel = viewModel(InMemoryGameRepository(claws), sound = sound)
+
+        viewModel.dispatch(GameAction.StopRolling)
+
+        assertTrue(SoundEffect.DAMAGE in sound.played)
+    }
+
+    @Test
+    fun `buying a card plays the purchase sound`() = runTest(dispatcher) {
+        val sound = FakeSoundPlayer()
+        val game = newGame()
+        val rich = game.copy(phase = TurnPhase.ACHETER, players = game.players.map { if (it.isBot) it else it.copy(energy = 99) })
+        val viewModel = viewModel(InMemoryGameRepository(rich), sound = sound)
+
+        viewModel.dispatch(GameAction.BuyCard(rich.shop.first().id))
+
+        assertTrue(SoundEffect.PURCHASE in sound.played)
+    }
+
+    @Test
+    fun `effects stay silent when they are turned off`() = runTest(dispatcher) {
+        val sound = FakeSoundPlayer()
+        val settings = InMemorySettingsRepository().apply { setSfxEnabled(false) }
+        val viewModel = viewModel(InMemoryGameRepository(newGame()), settings, sound)
+
+        viewModel.dispatch(GameAction.Reroll)
+
+        assertTrue(sound.played.isEmpty())
+    }
+
+    @Test
+    fun `music follows its setting`() = runTest(dispatcher) {
+        val sound = FakeSoundPlayer()
+        val settings = InMemorySettingsRepository()
+        viewModel(InMemoryGameRepository(newGame()), settings, sound)
+        assertEquals(true, sound.musicEnabled)
+
+        settings.setMusicEnabled(false)
+        runCurrent()
+
+        assertEquals(false, sound.musicEnabled)
     }
 
     @Test

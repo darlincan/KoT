@@ -11,7 +11,9 @@ import com.neonkaiju.kot.data.GameRepository
 import com.neonkaiju.kot.data.ResourceCatalogRepository
 import com.neonkaiju.kot.data.SettingsRepository
 import com.neonkaiju.kot.feature.game.GameViewModel
+import com.neonkaiju.kot.feature.game.SoundPlayer
 import com.neonkaiju.kot.model.SeedProvider
+import com.neonkaiju.kot.sound.AndroidSoundPlayer
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -40,6 +42,10 @@ object AppModule {
     @Singleton
     fun provideSettingsRepository(@ApplicationContext context: Context): SettingsRepository =
         DataStoreSettingsRepository.create(File(context.filesDir, "datastore/settings.preferences_pb"))
+
+    @Provides
+    @Singleton
+    fun provideSoundPlayer(@ApplicationContext context: Context): SoundPlayer = AndroidSoundPlayer(context)
 
     @Provides
     fun provideBotPolicy(): BotPolicy = HeuristicBotPolicy()
