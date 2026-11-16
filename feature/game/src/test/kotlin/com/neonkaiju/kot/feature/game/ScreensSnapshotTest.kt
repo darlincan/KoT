@@ -76,6 +76,8 @@ class ScreensSnapshotTest(private val device: DeviceConfig, private val deviceNa
             listOf(
                 arrayOf(DeviceConfig.PIXEL_5.copy(orientation = ScreenOrientation.LANDSCAPE, softButtons = false), "telephone", api),
                 arrayOf(DeviceConfig.NEXUS_10.copy(orientation = ScreenOrientation.LANDSCAPE, softButtons = false), "tablette", api),
+                // L'appli suit la rotation : chaque écran doit aussi tenir en portrait.
+                arrayOf(DeviceConfig.PIXEL_5.copy(orientation = ScreenOrientation.PORTRAIT, softButtons = false), "telephone_portrait", api),
             )
         }
     }

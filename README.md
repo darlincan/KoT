@@ -1,7 +1,7 @@
 # King of Tokyo — Néon Kaiju
 
 Adaptation Android du jeu de plateau *King of Tokyo – Dark Edition*, sur le thème original **Néon Kaiju**
-(cyberpunk synthwave). Une partie oppose 1 joueur humain à 3 bots, en orientation paysage.
+(cyberpunk synthwave). Une partie oppose 1 joueur humain à 3 bots ; l'application suit la rotation de l'appareil (portrait ou paysage).
 
 Le détail du projet (règles, périmètre, architecture, contrat des écrans) se trouve dans
 [`specifications.md`](specifications.md).
