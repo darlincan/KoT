@@ -104,3 +104,7 @@ La partie est sauvegardée automatiquement après chaque action. Le bouton Pause
 - [Nouvelle analyse du marché, des ressources et de l’architecture](docs/reanalyse-marche-et-tours.md)
 - [Stratégie réelle des bots et exemples vérifiés](docs/strategie-bots.md)
 - [Graines, contrôles statistiques et rejeu](docs/aleatoire-et-rejeu.md)
+
+## Sons
+
+Les fichiers de `feature/game/src/main/res/raw/` (boucle synthwave et effets courts) ont été générés pour ce projet par un script de synthèse : aucune source externe, aucune licence tierce. Musique et effets se coupent séparément dans les Réglages.

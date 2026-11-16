@@ -151,6 +151,8 @@ fun KotNavHost(
                 state = state,
                 onToggleFastBot = settingsViewModel::toggleFastBots,
                 onToggleFleeCountdown = settingsViewModel::toggleFleeCountdown,
+                onToggleMusic = settingsViewModel::toggleMusic,
+                onToggleSfx = settingsViewModel::toggleSfx,
                 onBack = { navController.popBackStack() }
             )
         }

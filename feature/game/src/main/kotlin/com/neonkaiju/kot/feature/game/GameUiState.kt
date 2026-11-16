@@ -31,15 +31,6 @@ data class PlayerUi(
     val cardCount: Int = 0,
 ) {
     val name: String get() = monster.displayName
-
-    /** Ce que TalkBack annonce pour cette fiche : la même information que les symboles affichés. */
-    val accessibilityLabel: String
-        get() = buildString {
-            append(name)
-            if (!isAlive) append(", éliminé")
-            append(", $hp ${if (hp > 1) "points" else "point"} de vie, $vp ${if (vp > 1) "étoiles" else "étoile"}, $energy ${if (energy > 1) "Cellules" else "Cellule"}, Surcharge $malice")
-            if (isInTokyo) append(", dans la Tour")
-        }
 }
 
 data class DieUi(
@@ -47,21 +38,7 @@ data class DieUi(
     val face: DieFace,
     val isKept: Boolean,
     val canToggle: Boolean,
-) {
-    /** Annonce TalkBack en toutes lettres, sans symbole. */
-    val accessibilityLabel: String
-        get() {
-            val faceName = when (face) {
-                DieFace.ONE -> "chiffre 1"
-                DieFace.TWO -> "chiffre 2"
-                DieFace.THREE -> "chiffre 3"
-                DieFace.ENERGY -> "éclair"
-                DieFace.CLAW -> "griffe"
-                DieFace.HEART -> "cœur"
-            }
-            return "Dé ${id + 1} : $faceName, ${if (isKept) "verrouillé" else "libre"}"
-        }
-}
+)
 
 /** raison pour une commande est grisée qu'on affiche au toucher long (rule transverse n2). */
 enum class BlockedReason {
@@ -76,14 +53,16 @@ enum class BlockedReason {
 /** Une commande de l'ecran : active, ou grivee avec sa raison. */
 data class CommandUi(val enabled: Boolean, val blockedReason: BlockedReason? = null)
 
-data class BotTurnUi(val botName: String, val lastAction: String)
+/** Moment du tour affiché au joueur ; le libellé est dans les ressources. */
+enum class PhaseUi { ROLL, RESOLVE, FLEE, ENTER, BUY, END_TURN, GAME_OVER, CHOOSE_POWER }
 
-data class FleeUi(val attackerName: String, val damageTaken: Int, val remainingHp: Int) {
-    val fleeConsequence: String
-        get() = "$attackerName prend la Tour. Vous pourrez de nouveau vous soigner avec les dés."
-    val stayConsequence: String
-        get() = "+2 ★ au début de votre prochain tour si vous survivez, mais aucun soin par les dés."
-}
+/**
+ * [lastAction] est l'explication produite par la politique du bot ([com.neonkaiju.kot.ai.BotPolicy]).
+ * [result] : gains à rappeler quand le bot passe aux achats.
+ */
+data class BotTurnUi(val botName: String, val lastAction: String, val result: ResolutionGains? = null)
+
+data class FleeUi(val attackerName: String, val damageTaken: Int, val remainingHp: Int)
 
 data class TileUi(val id: String, val name: String, val text: String)
 
@@ -99,7 +78,7 @@ data class GameUiState(
     val opponents: List<PlayerUi>,
     val tokyoOccupant: PlayerUi?,
     val activePlayerName: String,
-    val phaseLabel: String,
+    val phase: PhaseUi,
     val isRolling: Boolean,
     val isBuyPhase: Boolean,
     val maliceTiers: List<Int>,
@@ -132,13 +111,16 @@ data class ShopCardUi(
     /** Négatif s'il manque des Cellules. */
     val energyAfterPurchase: Int,
     val canBuy: Boolean,
-) {
-    val accessibilityLabel: String
-        get() {
-            val kind = if (type == CardType.ACTION) "action" else "pouvoir"
-            return "$name, $kind, prix $cost ${if (cost > 1) "Cellules" else "Cellule"}, $text"
-        }
-}
+)
+
+/** Dernier paiement du joueur ; [effectChange] est le gain ou la perte de Cellules dus à l'effet. */
+data class ReceiptUi(
+    val itemName: String,
+    val energyBefore: Int,
+    val paid: Int,
+    val effectChange: Int,
+    val energyAfter: Int,
+)
 
 data class ShopUiState(
     val buyerId: Int,
@@ -150,7 +132,7 @@ data class ShopUiState(
     val energyAfterSweep: Int,
     /** Une confirmation n'est valable que pour l'état de partie où elle a été ouverte. */
     val revision: Int,
-    val lastReceipt: String?,
+    val lastReceipt: ReceiptUi?,
 )
 
 enum class GameEndReason { TWENTY_STARS, LAST_SURVIVOR, ALL_ELIMINATED }

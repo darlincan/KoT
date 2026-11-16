@@ -1,33 +1,41 @@
 package com.neonkaiju.kot.feature.game
 
+import android.view.accessibility.AccessibilityManager
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Text
 import androidx.compose.material3.AlertDialog
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.neonkaiju.kot.model.*
-import android.view.accessibility.AccessibilityManager
-import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.delay
 
 /** Durée du compte à rebours optionnel de Fuir ou Rester (wireframe 05). */
 const val FLEE_COUNTDOWN_SECONDS = 6
+
+/** Lignes du résumé affichées dans la fenêtre : aucun écran ne défile (règle transverse n° 3). */
+private const val SUMMARY_MAX_LINES = 8
+
+/** Nombre de bots d'une partie, affichés comme « IA 1 » à « IA 3 » sur le choix du monstre. */
+private const val BOT_COUNT = 3
 
 sealed interface UiEvent {
     data object NewGame : UiEvent
@@ -73,10 +81,10 @@ fun HomeScreen(
 @Composable
 private fun HomeTitle(version: String, alignment: Alignment.Horizontal) {
     Column(horizontalAlignment = alignment) {
-        Text("LA GUERRE DES", color = NeonPalette.TextPrimary, fontSize = 16.sp)
-        Text("NÉON KAIJU", color = NeonPalette.NeonCyan, fontFamily = OrbitronFamily, fontSize = 32.sp, fontWeight = FontWeight.ExtraBold)
+        Text(stringResource(R.string.home_kicker), color = NeonPalette.TextPrimary, fontSize = 16.sp)
+        Text(stringResource(R.string.home_title), color = NeonPalette.NeonCyan, fontFamily = OrbitronFamily, fontSize = 32.sp, fontWeight = FontWeight.ExtraBold)
         Spacer(Modifier.height(16.dp))
-        Text("Version $version • Édition Sombre", color = NeonPalette.NeonPink, fontSize = 12.sp)
+        Text(stringResource(R.string.home_version, version), color = NeonPalette.NeonPink, fontSize = 12.sp)
     }
 }
 
@@ -88,22 +96,22 @@ private fun HomeActions(canResume: Boolean, onEvent: (UiEvent) -> Unit, modifier
         verticalArrangement = Arrangement.spacedBy(10.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        NeonButton("Jouer", onClick = { onEvent(UiEvent.NewGame) }, modifier = Modifier.fillMaxWidth())
-        Text("Vous contre 3 monstres IA", color = NeonPalette.TextPrimary, fontSize = 11.sp)
+        NeonButton(stringResource(R.string.home_play), onClick = { onEvent(UiEvent.NewGame) }, modifier = Modifier.fillMaxWidth())
+        Text(stringResource(R.string.home_opponents), color = NeonPalette.TextPrimary, fontSize = 11.sp)
         NeonButton(
-            "Reprendre",
+            stringResource(R.string.home_resume),
             onClick = { onEvent(UiEvent.Resume) },
             enabled = canResume,
             accentColor = NeonPalette.NeonCyan,
-            disabledReason = "Aucune partie sauvegardée en cours",
+            disabledReason = stringResource(R.string.home_resume_blocked),
             onDisabledLongPress = { tooltip = it },
             modifier = Modifier.fillMaxWidth()
         )
         tooltip?.let { Text(it, color = NeonPalette.NeonPink, fontSize = 12.sp) }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            NeonButton("Règles", onClick = { onEvent(UiEvent.OpenRules) }, modifier = Modifier.weight(1f), accentColor = NeonPalette.NeonCyan)
-            NeonButton("Monstres", onClick = { onEvent(UiEvent.NewGame) }, modifier = Modifier.weight(1f), accentColor = NeonPalette.NeonCyan)
-            NeonButton("Réglages", onClick = { onEvent(UiEvent.OpenSettings) }, modifier = Modifier.weight(1f), accentColor = NeonPalette.NeonCyan)
+            NeonButton(stringResource(R.string.home_rules), onClick = { onEvent(UiEvent.OpenRules) }, modifier = Modifier.weight(1f), accentColor = NeonPalette.NeonCyan)
+            NeonButton(stringResource(R.string.home_monsters), onClick = { onEvent(UiEvent.NewGame) }, modifier = Modifier.weight(1f), accentColor = NeonPalette.NeonCyan)
+            NeonButton(stringResource(R.string.home_settings), onClick = { onEvent(UiEvent.OpenSettings) }, modifier = Modifier.weight(1f), accentColor = NeonPalette.NeonCyan)
         }
     }
 }
@@ -113,6 +121,7 @@ fun MonsterPickerScreen(
     state: MonsterPickerUiState,
     onEvent: (UiEvent) -> Unit
 ) {
+    val backLabel = stringResource(R.string.picker_back_a11y)
 
     Column(
         modifier = Modifier
@@ -123,11 +132,11 @@ fun MonsterPickerScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            NeonButton("‹", onClick = { onEvent(UiEvent.BackHome) }, accentColor = NeonPalette.NeonCyan,
-                modifier = Modifier.semantics { contentDescription = "Retour à l'accueil" })
+            NeonButton(stringResource(R.string.symbol_back), onClick = { onEvent(UiEvent.BackHome) }, accentColor = NeonPalette.NeonCyan,
+                modifier = Modifier.semantics { contentDescription = backLabel })
             Column {
-                Text("CHOISIS TON KAIJU", color = NeonPalette.NeonCyan, fontFamily = OrbitronFamily, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                Text("Vous + 3 IA", color = NeonPalette.TextPrimary, fontSize = 12.sp)
+                Text(stringResource(R.string.picker_title), color = NeonPalette.NeonCyan, fontFamily = OrbitronFamily, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.picker_subtitle), color = NeonPalette.TextPrimary, fontSize = 12.sp)
             }
         }
 
@@ -148,25 +157,31 @@ fun MonsterPickerScreen(
         ) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("Vos adversaires (IA)", color = NeonPalette.TextPrimary, fontSize = 12.sp)
-                    listOf("IA 1", "IA 2", "IA 3").forEach { chip ->
-                        Text(chip, color = NeonPalette.NeonCyan, fontSize = 11.sp, modifier = Modifier
+                    Text(stringResource(R.string.picker_opponents), color = NeonPalette.TextPrimary, fontSize = 12.sp)
+                    for (bot in 1..BOT_COUNT) {
+                        Text(stringResource(R.string.picker_opponent_chip, bot), color = NeonPalette.NeonCyan, fontSize = 11.sp, modifier = Modifier
                             .border(1.dp, NeonPalette.NeonCyan.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
                             .padding(horizontal = 8.dp, vertical = 2.dp))
                     }
                 }
-                Text("3 bots tirés au sort parmi les 5 autres", color = NeonPalette.TextPrimary, fontSize = 13.sp)
+                Text(stringResource(R.string.picker_bots_note), color = NeonPalette.TextPrimary, fontSize = 13.sp)
             }
-            NeonButton("Entrer dans la ville", onClick = { onEvent(UiEvent.StartGame) })
+            NeonButton(stringResource(R.string.picker_start), onClick = { onEvent(UiEvent.StartGame) })
         }
     }
 }
 
 @Composable
 private fun MonsterCard(monster: MonsterId, isSelected: Boolean, onEvent: (UiEvent) -> Unit, modifier: Modifier) {
+    val a11y = stringResource(
+        R.string.picker_monster_a11y,
+        monster.displayName,
+        stringResource(if (isSelected) R.string.picker_selected_a11y else R.string.picker_available_a11y),
+        monster.bio,
+    )
     Column(
         modifier = modifier
-            .semantics { contentDescription = "${monster.displayName}, ${if (isSelected) "sélectionné" else "disponible"}, ${monster.bio}" }
+            .semantics { contentDescription = a11y }
             .background(NeonPalette.Surface, RoundedCornerShape(10.dp))
             .border(
                 width = if (isSelected) 3.dp else 1.dp,
@@ -186,9 +201,13 @@ private fun MonsterCard(monster: MonsterId, isSelected: Boolean, onEvent: (UiEve
             color = NeonPalette.TextPrimary,
             fontSize = 11.sp,
             lineHeight = 14.sp,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            textAlign = TextAlign.Center
         )
-        Text(if (isSelected) "SÉLECTIONNÉ" else "DISPONIBLE", color = if (isSelected) NeonPalette.NeonPink else NeonPalette.NeonCyan, fontSize = 11.sp)
+        Text(
+            stringResource(if (isSelected) R.string.picker_selected else R.string.picker_available),
+            color = if (isSelected) NeonPalette.NeonPink else NeonPalette.NeonCyan,
+            fontSize = 11.sp
+        )
     }
 }
 
@@ -202,7 +221,8 @@ fun GameScreen(
 
     val me = state.me
     val opponents = state.opponents
-    val occupant = state.tokyoOccupant
+    val glitch = damageFlash(me.hp)
+    DamageHaptics(me.hp)
 
     Box(
         modifier = Modifier
@@ -233,45 +253,7 @@ fun GameScreen(
                     modifier = Modifier.weight(0.42f).fillMaxHeight(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .background(NeonPalette.Surface, RoundedCornerShape(12.dp))
-                            .border(2.dp, NeonPalette.NeonCyan, RoundedCornerShape(12.dp))
-                            .padding(12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("LA TOUR CENTRALE", color = NeonPalette.NeonCyan, fontFamily = OrbitronFamily, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
-                            Spacer(Modifier.height(6.dp))
-                            TowerRing(occupant?.monster)
-                            Spacer(Modifier.height(6.dp))
-                            if (occupant != null) {
-                                Text("👑 ${occupant.name}", color = NeonPalette.NeonPink, fontFamily = OrbitronFamily, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                                Text("♥ ${occupant.hp}/10   ★ ${occupant.vp}/20", color = NeonPalette.TextPrimary, fontSize = 14.sp)
-                                Text("+2 ★ au début de son tour", color = NeonPalette.TextPrimary, fontSize = 12.sp)
-                            } else {
-                                Text("ZONE LIBRE (+1 ★ à l'entrée)", color = NeonPalette.TextPrimary.copy(alpha = 0.7f), fontSize = 14.sp)
-                            }
-                            Spacer(Modifier.height(4.dp))
-                            val botTurn = state.botTurn
-                            if (botTurn != null) {
-                                BotTurnOverlay(botTurn.botName, botTurn.lastAction, state.isBotFastForward,
-                                    { onEvent(UiEvent.ToggleFastBot) })
-                            } else {
-                            Text("Résumé · toucher pour le détail", color = NeonPalette.NeonCyan, fontSize = 11.sp,
-                                modifier = Modifier.heightIn(min = 48.dp).clickable { showSummary = true })
-                            Text(
-                                text = state.summary.takeLast(3).joinToString("\n"),
-                                color = NeonPalette.NeonCyan,
-                                fontSize = 12.sp,
-                                lineHeight = 15.sp,
-                                maxLines = 3
-                            )
-                            }
-                        }
-                    }
+                    TowerPanel(state, onEvent, { showSummary = true }, Modifier.weight(1f).fillMaxHeight())
                     SurchargeGaugeBar(malice = me.malice, tiers = state.maliceTiers, modifier = Modifier.fillMaxHeight())
                 }
 
@@ -302,11 +284,11 @@ fun GameScreen(
 
         if (showSummary) {
             AlertDialog(onDismissRequest = { showSummary = false },
-                title = { Text("Résumé du tour — ${state.activePlayerName}") },
-                text = { Column(Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState())) {
-                    state.summary.forEach { Text(it, color = NeonPalette.TextPrimary, fontSize = 13.sp, lineHeight = 18.sp) }
+                title = { Text(stringResource(R.string.summary_title, state.activePlayerName)) },
+                text = { Column {
+                    state.summary.takeLast(SUMMARY_MAX_LINES).forEach { Text(it, color = NeonPalette.TextPrimary, fontSize = 13.sp, lineHeight = 16.sp, maxLines = 1) }
                 } },
-                confirmButton = { NeonButton("Fermer", onClick = { showSummary = false }) })
+                confirmButton = { NeonButton(stringResource(R.string.action_close), onClick = { showSummary = false }) })
         }
 
         state.flee?.let { flee ->
@@ -324,18 +306,82 @@ fun GameScreen(
                 onPickTile = { onEvent(UiEvent.DispatchGameAction(GameAction.PickMaliceTile(it))) }
             )
         }
+
+        GlitchOverlay(glitch)
     }
 }
 
+/** La Tour centrale : occupant, bonus et, selon le tour, le résumé ou le bandeau du bot. */
+@Composable
+internal fun TowerPanel(state: GameUiState, onEvent: (UiEvent) -> Unit, onOpenSummary: () -> Unit, modifier: Modifier) {
+    val occupant = state.tokyoOccupant
+    Box(
+        modifier = modifier
+            .background(NeonPalette.Surface, RoundedCornerShape(12.dp))
+            .border(2.dp, NeonPalette.NeonCyan, RoundedCornerShape(12.dp))
+            .padding(12.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(stringResource(R.string.tower_title), color = NeonPalette.NeonCyan, fontFamily = OrbitronFamily, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+            Spacer(Modifier.height(6.dp))
+            TowerRing(occupant?.monster)
+            Spacer(Modifier.height(6.dp))
+            if (occupant != null) {
+                Text(stringResource(R.string.tower_occupant, occupant.name), color = NeonPalette.NeonPink, fontFamily = OrbitronFamily, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.tower_stats, occupant.hp, occupant.vp), color = NeonPalette.TextPrimary, fontSize = 14.sp)
+                Text(stringResource(R.string.tower_bonus), color = NeonPalette.TextPrimary, fontSize = 12.sp)
+            } else {
+                Text(stringResource(R.string.tower_free), color = NeonPalette.TextPrimary.copy(alpha = 0.7f), fontSize = 14.sp)
+            }
+            Spacer(Modifier.height(4.dp))
+            val botTurn = state.botTurn
+            if (botTurn != null) {
+                BotTurnOverlay(botTurn, state.isBotFastForward, { onEvent(UiEvent.ToggleFastBot) })
+            } else {
+                Text(stringResource(R.string.summary_hint), color = NeonPalette.NeonCyan, fontSize = 11.sp,
+                    modifier = Modifier.heightIn(min = 48.dp).clickable(onClick = onOpenSummary))
+                Text(
+                    text = state.summary.takeLast(3).joinToString("\n"),
+                    color = NeonPalette.NeonCyan,
+                    fontSize = 12.sp,
+                    lineHeight = 15.sp,
+                    maxLines = 3
+                )
+            }
+        }
+    }
+}
+
+/** Ce que TalkBack annonce pour une fiche : la même information que les symboles affichés. */
+@Composable
+private fun PlayerUi.accessibilityLabel(): String = buildList {
+    add(name)
+    if (!isAlive) add(stringResource(R.string.player_a11y_eliminated))
+    add(frenchPlural(R.plurals.a11y_hearts, hp, hp))
+    add(frenchPlural(R.plurals.a11y_stars, vp, vp))
+    add(frenchPlural(R.plurals.a11y_cells, energy, energy))
+    add(stringResource(R.string.player_a11y_surcharge, malice))
+    if (isInTokyo) add(stringResource(R.string.player_a11y_tower))
+}.joinToString(", ")
+
 @Composable
 fun PlayerCardCompact(player: PlayerUi, stacked: Boolean = false) {
-    val border = if (player.isActive) NeonPalette.NeonPink else NeonPalette.NeonCyan.copy(alpha = 0.35f)
-    val name = "${if (!player.isAlive) "☠ " else if (player.isInTokyo) "👑 " else ""}${player.name}"
-    val stats = "IA · ♥${player.hp} ★${player.vp} ⚡${player.energy} S${player.malice}"
-    val gainsText = player.gains?.let { "Gains : +${it.vp} ★  +${it.energy} ⚡  +${it.healing} ♥" }
+    val flash = damageFlash(player.hp)
+    val shownHp by animateIntAsState(player.hp, tween(GLITCH_DURATION_MS), label = "hp")
+    val border = if (flash > 0f || player.isActive) NeonPalette.NeonPink else NeonPalette.NeonCyan.copy(alpha = 0.35f)
+    val name = when {
+        !player.isAlive -> stringResource(R.string.player_name_eliminated, player.name)
+        player.isInTokyo -> stringResource(R.string.player_name_tower, player.name)
+        else -> player.name
+    }
+    val stats = stringResource(R.string.player_stats, shownHp, player.vp, player.energy, player.malice)
+    val gainsText = player.gains?.let { stringResource(R.string.player_gains, it.vp, it.energy, it.healing) }
+    val a11y = player.accessibilityLabel()
     val frame = Modifier.fillMaxWidth()
-        .semantics(mergeDescendants = true) { contentDescription = player.accessibilityLabel }
-        .background(NeonPalette.Surface, RoundedCornerShape(8.dp))
+        .semantics(mergeDescendants = true) { contentDescription = a11y }
+        .background(NeonPalette.NeonPink.copy(alpha = 0.4f * flash), RoundedCornerShape(8.dp))
+        .background(NeonPalette.Surface.copy(alpha = 1f - 0.5f * flash), RoundedCornerShape(8.dp))
         .border(1.dp, border, RoundedCornerShape(8.dp)).padding(8.dp)
     if (stacked) {
         Column(modifier = frame) {
@@ -357,41 +403,47 @@ fun PlayerCardCompact(player: PlayerUi, stacked: Boolean = false) {
 @Composable
 fun PlayerCardSelf(player: PlayerUi) {
     val gains = player.gains
+    val shownHp by animateIntAsState(player.hp, tween(GLITCH_DURATION_MS), label = "hp")
+    val a11y = stringResource(R.string.player_a11y_self, player.accessibilityLabel())
+    val selfName = stringResource(R.string.player_self_name, player.name)
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .semantics(mergeDescendants = true) { contentDescription = "Vous : ${player.accessibilityLabel}" }
+            .semantics(mergeDescendants = true) { contentDescription = a11y }
             .background(NeonPalette.Surface, RoundedCornerShape(10.dp))
             .border(2.dp, NeonPalette.NeonPink, RoundedCornerShape(10.dp))
             .padding(10.dp)
     ) {
         Text(
-            text = "${if (player.isInTokyo) "👑 " else ""}${player.name} (VOUS)",
+            text = if (player.isInTokyo) stringResource(R.string.player_name_tower, selfName) else selfName,
             color = NeonPalette.NeonPink,
             fontFamily = OrbitronFamily,
             fontWeight = FontWeight.ExtraBold,
             fontSize = 14.sp
         )
         Text(
-            text = "♥ ${player.hp}/10   ★ ${player.vp}/20   ⚡ ${player.energy} · ${player.cardCount} ${if (player.cardCount > 1) "cartes" else "carte"}",
+            text = frenchPlural(R.plurals.player_self_stats, player.cardCount, player.cardCount, shownHp, player.vp, player.energy),
             color = NeonPalette.TextPrimary,
             fontSize = 13.sp
         )
         if (gains != null) {
             val title = when {
-                gains.isStartOfTurn -> "BONUS DE DÉBUT DE TOUR AJOUTÉS"
-                gains.isComplete -> "GAINS DE LA DERNIÈRE RÉSOLUTION AJOUTÉS"
-                else -> "GAINS DÉJÀ AJOUTÉS — RÉSOLUTION EN COURS"
+                gains.isStartOfTurn -> R.string.gains_start_of_turn
+                gains.isComplete -> R.string.gains_complete
+                else -> R.string.gains_in_progress
             }
-            Text(title, color = NeonPalette.NeonCyan, fontSize = 10.sp, lineHeight = 12.sp)
+            Text(stringResource(title), color = NeonPalette.NeonCyan, fontSize = 10.sp, lineHeight = 12.sp)
             val otherVp = (gains.vp - gains.numbersVp - gains.tokyoVp).coerceAtLeast(0)
-            val vpDetail = "dés +${gains.numbersVp}, Tour +${gains.tokyoVp}" + if (otherVp > 0) ", effets +$otherVp" else ""
-            Text("+${gains.vp} ★ ($vpDetail)\n+${gains.energy} Cellules · +${gains.healing} ♥ · +${gains.malice} Surcharge",
+            Text(
+                if (otherVp > 0) {
+                    stringResource(R.string.gains_detail_effects, gains.vp, gains.numbersVp, gains.tokyoVp, gains.energy, gains.healing, gains.malice, otherVp)
+                } else {
+                    stringResource(R.string.gains_detail, gains.vp, gains.numbersVp, gains.tokyoVp, gains.energy, gains.healing, gains.malice)
+                },
                 color = NeonPalette.NeonPink, fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight.Bold)
         } else {
-            Text("Les gains seront ajoutés à la résolution.", color = NeonPalette.NeonCyan, fontSize = 11.sp, lineHeight = 13.sp)
+            Text(stringResource(R.string.gains_pending), color = NeonPalette.NeonCyan, fontSize = 11.sp, lineHeight = 13.sp)
         }
-
     }
 }
 
@@ -399,21 +451,20 @@ fun PlayerCardSelf(player: PlayerUi) {
 @Composable
 fun SurchargeGaugeBar(malice: Int, tiers: List<Int>, modifier: Modifier = Modifier) {
     val max = tiers.last()
+    val a11y = stringResource(R.string.gauge_a11y, malice, max, tiers.joinToString(", "))
     Column(
         modifier = modifier
             .width(44.dp)
-            .semantics(mergeDescendants = true) {
-                contentDescription = "Surcharge $malice sur $max. Paliers ${tiers.joinToString(", ")} : choisir un pouvoir"
-            }
+            .semantics(mergeDescendants = true) { contentDescription = a11y }
             .background(NeonPalette.Surface, RoundedCornerShape(8.dp))
             .padding(horizontal = 4.dp, vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
-        Text("$malice/$max", color = NeonPalette.NeonCyan, fontSize = 11.sp, lineHeight = 13.sp, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.gauge_value, malice, max), color = NeonPalette.NeonCyan, fontSize = 11.sp, lineHeight = 13.sp, fontWeight = FontWeight.Bold)
         for (level in max downTo 1) {
             Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(if (level in tiers) "$level" else "", color = NeonPalette.TextPrimary, fontSize = 10.sp, lineHeight = 11.sp, modifier = Modifier.width(14.dp))
+                Text(if (level in tiers) level.toString() else "", color = NeonPalette.TextPrimary, fontSize = 10.sp, lineHeight = 11.sp, modifier = Modifier.width(14.dp))
                 Box(
                     Modifier
                         .weight(1f)
@@ -425,18 +476,23 @@ fun SurchargeGaugeBar(malice: Int, tiers: List<Int>, modifier: Modifier = Modifi
                 )
             }
         }
-        Text("0", color = NeonPalette.TextPrimary, fontSize = 10.sp, lineHeight = 11.sp)
+        Text(0.toString(), color = NeonPalette.TextPrimary, fontSize = 10.sp, lineHeight = 11.sp)
     }
 }
 
 @Composable
 fun BotTurnOverlay(
-    botName: String,
-    lastAction: String,
+    botTurn: BotTurnUi,
     isFast: Boolean,
     onToggleFast: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val result = botTurn.result
+    val detail = if (result != null) {
+        stringResource(R.string.bot_result, result.vp, result.energy, result.healing, result.malice, botTurn.lastAction)
+    } else {
+        botTurn.lastAction
+    }
     Row(
         modifier = modifier
             .background(NeonPalette.Surface.copy(alpha = 0.95f), RoundedCornerShape(8.dp))
@@ -445,9 +501,9 @@ fun BotTurnOverlay(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("TOUR BOT : $botName • $lastAction", color = NeonPalette.TextPrimary, fontSize = 12.sp, lineHeight = 14.sp, maxLines = 4, modifier = Modifier.weight(1f))
+        Text(stringResource(R.string.bot_overlay, botTurn.botName, detail), color = NeonPalette.TextPrimary, fontSize = 12.sp, lineHeight = 14.sp, maxLines = 4, modifier = Modifier.weight(1f))
         NeonButton(
-            text = if (isFast) "Vitesse x2" else "Accélérer",
+            text = stringResource(if (isFast) R.string.bot_fast_on else R.string.bot_fast_off),
             onClick = onToggleFast,
             accentColor = NeonPalette.NeonCyan
         )
@@ -502,22 +558,22 @@ fun FleeDialog(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text("ALERTE BRÈCHE DANS LA TOUR", color = NeonPalette.NeonPink, fontFamily = OrbitronFamily, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
-            Text("${flee.attackerName} vous a infligé ${flee.damageTaken} dégât(s).", color = NeonPalette.TextPrimary, fontSize = 14.sp)
-            Text("Il vous reste ${flee.remainingHp} ♥", color = NeonPalette.NeonPink, fontWeight = FontWeight.ExtraBold, fontSize = 24.sp)
+            Text(stringResource(R.string.flee_title), color = NeonPalette.NeonPink, fontFamily = OrbitronFamily, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+            Text(frenchPlural(R.plurals.flee_damage, flee.damageTaken, flee.damageTaken, flee.attackerName), color = NeonPalette.TextPrimary, fontSize = 14.sp)
+            Text(stringResource(R.string.flee_remaining, flee.remainingHp), color = NeonPalette.NeonPink, fontWeight = FontWeight.ExtraBold, fontSize = 24.sp)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)
             ) {
-                FleeOption("FUIR", flee.fleeConsequence, NeonPalette.NeonCyan, Modifier.weight(1f))
-                FleeOption("RESTER", flee.stayConsequence, NeonPalette.NeonPink, Modifier.weight(1f))
+                FleeOption(stringResource(R.string.flee_option_flee), stringResource(R.string.flee_consequence, flee.attackerName), NeonPalette.NeonCyan, Modifier.weight(1f))
+                FleeOption(stringResource(R.string.flee_option_stay), stringResource(R.string.stay_consequence), NeonPalette.NeonPink, Modifier.weight(1f))
             }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                NeonButton("Fuir la Tour", onClick = onFlee, accentColor = NeonPalette.NeonCyan, modifier = Modifier.weight(1f))
-                NeonButton("Rester", onClick = onStay, accentColor = NeonPalette.NeonPink, modifier = Modifier.weight(1f))
+                NeonButton(stringResource(R.string.action_flee), onClick = onFlee, accentColor = NeonPalette.NeonCyan, modifier = Modifier.weight(1f))
+                NeonButton(stringResource(R.string.action_stay), onClick = onStay, accentColor = NeonPalette.NeonPink, modifier = Modifier.weight(1f))
             }
             if (countdownRuns) {
-                Text("Sans réponse dans $secondsLeft s, vous restez", color = NeonPalette.TextPrimary, fontSize = 12.sp)
+                Text(stringResource(R.string.flee_countdown, secondsLeft), color = NeonPalette.TextPrimary, fontSize = 12.sp)
             }
         }
     }
@@ -551,7 +607,7 @@ fun MalicePickerSheet(
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Palier ${pick.level} : choisir un pouvoir", color = NeonPalette.NeonCyan, fontFamily = OrbitronFamily, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+            Text(stringResource(R.string.malice_title, pick.level), color = NeonPalette.NeonCyan, fontFamily = OrbitronFamily, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
                 pick.tiers.forEach { tier ->
                     MaliceTierChip(tier, isCurrent = tier == pick.level, Modifier.weight(1f))
@@ -567,7 +623,7 @@ fun MalicePickerSheet(
             }
             
             Text(
-                text = if (pick.ownedTiles.isEmpty()) "Pouvoirs détenus : aucun" else "Pouvoirs détenus",
+                text = stringResource(if (pick.ownedTiles.isEmpty()) R.string.malice_owned_none else R.string.malice_owned),
                 color = NeonPalette.NeonCyan,
                 fontSize = 11.sp,
                 modifier = Modifier.fillMaxWidth()
@@ -576,7 +632,7 @@ fun MalicePickerSheet(
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
                     pick.ownedTiles.forEach { tile ->
                         Text(
-                            text = "${tile.name} · ${tile.text}",
+                            text = stringResource(R.string.malice_owned_item, tile.name, tile.text),
                             color = NeonPalette.TextPrimary,
                             fontSize = 11.sp,
                             lineHeight = 13.sp,
@@ -601,13 +657,14 @@ private fun MaliceTierChip(tier: Int, isCurrent: Boolean, modifier: Modifier) {
             .padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Palier $tier", color = if (isCurrent) NeonPalette.NeonPink else NeonPalette.TextPrimary, fontWeight = FontWeight.Bold, fontSize = 11.sp, lineHeight = 13.sp)
-        Text("Choisir un pouvoir", color = NeonPalette.TextPrimary, fontSize = 10.sp, lineHeight = 12.sp)
+        Text(stringResource(R.string.malice_tier, tier), color = if (isCurrent) NeonPalette.NeonPink else NeonPalette.TextPrimary, fontWeight = FontWeight.Bold, fontSize = 11.sp, lineHeight = 13.sp)
+        Text(stringResource(R.string.malice_tier_hint), color = NeonPalette.TextPrimary, fontSize = 10.sp, lineHeight = 12.sp)
     }
 }
 
 @Composable
 private fun MaliceTileOffer(tile: TileUi, onPickTile: (String) -> Unit, modifier: Modifier) {
+    val a11y = stringResource(R.string.malice_tile_a11y, tile.name, tile.text)
     Column(
         modifier = modifier
             .background(NeonPalette.Surface, RoundedCornerShape(10.dp))
@@ -615,12 +672,12 @@ private fun MaliceTileOffer(tile: TileUi, onPickTile: (String) -> Unit, modifier
             .padding(8.dp),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Column(Modifier.semantics(mergeDescendants = true) { contentDescription = "Pouvoir ${tile.name} : ${tile.text}" }) {
+        Column(Modifier.semantics(mergeDescendants = true) { contentDescription = a11y }) {
             Text(tile.name, color = NeonPalette.NeonPink, fontWeight = FontWeight.Bold, fontSize = 14.sp, lineHeight = 17.sp)
             Text(tile.text, color = NeonPalette.TextPrimary, fontSize = 12.sp, lineHeight = 15.sp)
         }
         Spacer(Modifier.height(4.dp))
-        NeonButton("Équiper", onClick = { onPickTile(tile.id) }, modifier = Modifier.fillMaxWidth())
+        NeonButton(stringResource(R.string.action_equip), onClick = { onPickTile(tile.id) }, modifier = Modifier.fillMaxWidth())
     }
 }
 
@@ -655,14 +712,14 @@ private fun GameOverHeadline(state: GameOverUiState, modifier: Modifier) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(state.endReason.label(), color = NeonPalette.NeonCyan, fontWeight = FontWeight.Bold, fontSize = 13.sp)
         Text(
-            text = state.winnerName?.let { "$it règne sur la mégapole" } ?: "Personne ne règne sur la mégapole",
+            text = state.winnerName?.let { stringResource(R.string.end_winner, it) } ?: stringResource(R.string.end_no_winner),
             color = NeonPalette.NeonPink,
             fontFamily = OrbitronFamily,
             fontWeight = FontWeight.ExtraBold,
             fontSize = 22.sp,
             lineHeight = 28.sp
         )
-        Text("Graine de partie : ${state.seed}", color = NeonPalette.TextPrimary, fontSize = 12.sp)
+        Text(stringResource(R.string.end_seed, state.seed.toString()), color = NeonPalette.TextPrimary, fontSize = 12.sp)
     }
 }
 
@@ -671,6 +728,7 @@ private fun GameOverRanking(state: GameOverUiState, modifier: Modifier) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         state.ranking.forEachIndexed { index, player ->
             val isWinner = player.name == state.winnerName
+            val shownName = if (player.id == state.humanId) stringResource(R.string.end_player_you, player.name) else player.name
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -681,14 +739,14 @@ private fun GameOverRanking(state: GameOverUiState, modifier: Modifier) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "${if (player.isAlive) index + 1 else "–"}  ${player.name}${if (player.id == state.humanId) " (vous)" else ""}",
+                    text = if (player.isAlive) stringResource(R.string.end_rank, index + 1, shownName) else stringResource(R.string.end_rank_out, shownName),
                     color = if (isWinner) NeonPalette.NeonPink else NeonPalette.TextPrimary,
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp,
                     modifier = Modifier.weight(1f)
                 )
                 Text(
-                    text = "★ ${player.vp}  ♥ ${player.hp}  ⚡ ${player.energy}${if (player.isAlive) "" else "  · éliminé"}",
+                    text = stringResource(if (player.isAlive) R.string.end_stats else R.string.end_stats_out, player.vp, player.hp, player.energy),
                     color = NeonPalette.NeonCyan,
                     fontSize = 12.sp
                 )
@@ -700,22 +758,42 @@ private fun GameOverRanking(state: GameOverUiState, modifier: Modifier) {
 @Composable
 private fun GameOverActions(onReplay: () -> Unit, onBackHome: () -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-        NeonButton("Accueil", onClick = onBackHome, accentColor = NeonPalette.NeonCyan, modifier = Modifier.weight(1f))
-        NeonButton("Rejouer", onClick = onReplay, modifier = Modifier.weight(1f))
+        NeonButton(stringResource(R.string.action_home), onClick = onBackHome, accentColor = NeonPalette.NeonCyan, modifier = Modifier.weight(1f))
+        NeonButton(stringResource(R.string.action_replay), onClick = onReplay, modifier = Modifier.weight(1f))
     }
 }
 
-fun GameEndReason.label(): String = when (this) {
-    GameEndReason.TWENTY_STARS -> "VICTOIRE PAR 20 ★"
-    GameEndReason.LAST_SURVIVOR -> "DERNIER SURVIVANT"
-    GameEndReason.ALL_ELIMINATED -> "TOUS ÉLIMINÉS"
-}
+@Composable
+fun GameEndReason.label(): String = stringResource(
+    when (this) {
+        GameEndReason.TWENTY_STARS -> R.string.end_twenty_stars
+        GameEndReason.LAST_SURVIVOR -> R.string.end_last_survivor
+        GameEndReason.ALL_ELIMINATED -> R.string.end_all_eliminated
+    }
+)
 
-fun BlockedReason.label(): String = when (this) {
-    BlockedReason.NO_ROLLS_LEFT -> "Plus de lancers disponibles"
-    BlockedReason.ALL_DICE_KEPT -> "Déverrouillez au moins un dé pour relancer"
-    BlockedReason.ROLLING_OVER -> "Vos lancers sont terminés pour ce tour"
-    BlockedReason.NOT_BUY_PHASE -> "Le Marché noir n'est accessible qu'en phase d'achat"
-    BlockedReason.RESOLVE_FIRST -> "Terminez d'abord la résolution de vos dés"
-    BlockedReason.BOT_PLAYING -> "Le bot joue"
-}
+@Composable
+fun BlockedReason.label(): String = stringResource(
+    when (this) {
+        BlockedReason.NO_ROLLS_LEFT -> R.string.blocked_no_rolls
+        BlockedReason.ALL_DICE_KEPT -> R.string.blocked_all_kept
+        BlockedReason.ROLLING_OVER -> R.string.blocked_rolling_over
+        BlockedReason.NOT_BUY_PHASE -> R.string.blocked_not_buy_phase
+        BlockedReason.RESOLVE_FIRST -> R.string.blocked_resolve_first
+        BlockedReason.BOT_PLAYING -> R.string.blocked_bot_playing
+    }
+)
+
+@Composable
+fun PhaseUi.label(): String = stringResource(
+    when (this) {
+        PhaseUi.ROLL -> R.string.phase_roll
+        PhaseUi.RESOLVE -> R.string.phase_resolve
+        PhaseUi.FLEE -> R.string.phase_flee
+        PhaseUi.ENTER -> R.string.phase_enter
+        PhaseUi.BUY -> R.string.phase_buy
+        PhaseUi.END_TURN -> R.string.phase_end_turn
+        PhaseUi.GAME_OVER -> R.string.phase_over
+        PhaseUi.CHOOSE_POWER -> R.string.phase_choose_power
+    }
+)

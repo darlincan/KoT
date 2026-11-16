@@ -2,6 +2,7 @@ package com.neonkaiju.kot.feature.game
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -57,8 +58,16 @@ class ScreensSnapshotTest(private val device: DeviceConfig, private val deviceNa
         }
     }
 
+    /** Glitch des dégâts à pleine intensité, au-dessus de l'écran de jeu. */
+    @Test fun glitch() = capture("03c_glitch") {
+        Box(Modifier.fillMaxSize()) {
+            GameScreen(PreviewData.game, onEvent = {})
+            GlitchOverlay(1f)
+        }
+    }
+
     @Test fun rules() = capture("regles") { RulesScreen(onBack = {}) }
-    @Test fun settings() = capture("reglages") { SettingsScreen(PreviewData.settings, onToggleFastBot = {}, onToggleFleeCountdown = {}, onBack = {}) }
+    @Test fun settings() = capture("reglages") { SettingsScreen(PreviewData.settings, onToggleFastBot = {}, onToggleFleeCountdown = {}, onToggleMusic = {}, onToggleSfx = {}, onBack = {}) }
 
     companion object {
         @JvmStatic
