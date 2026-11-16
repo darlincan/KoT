@@ -149,6 +149,7 @@ fun KotNavHost(
             SettingsScreen(
                 state = state,
                 onToggleFastBot = settingsViewModel::toggleFastBots,
+                onToggleFleeCountdown = settingsViewModel::toggleFleeCountdown,
                 onBack = { navController.popBackStack() }
             )
         }

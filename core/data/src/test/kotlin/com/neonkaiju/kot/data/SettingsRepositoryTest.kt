@@ -31,4 +31,18 @@ class SettingsRepositoryTest {
         assertTrue(file.length() > 0, "le réglage est écrit sur disque")
         scope.cancel()
     }
+
+    @Test
+    fun `flee countdown is off by default, then stored`() = runTest {
+        val scope = TestScope(UnconfinedTestDispatcher(testScheduler))
+        val repository = DataStoreSettingsRepository.create(File(dir, "countdown.preferences_pb"), scope)
+
+        assertFalse(repository.settings.first().fleeCountdown)
+
+        repository.setFleeCountdown(true)
+
+        assertTrue(repository.settings.first().fleeCountdown)
+        assertFalse(repository.settings.first().fastBots, "les autres réglages ne changent pas")
+        scope.cancel()
+    }
 }

@@ -67,6 +67,10 @@ class GameViewModel @Inject constructor(
         .map { it.fastBots }
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
+    private val fleeCountdown: StateFlow<Boolean> = settingsRepository.settings
+        .map { it.fleeCountdown }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
     private val botsActive = MutableStateFlow(false)
     private val botPresenter = BotTurnPresenter(botPolicy)
 
@@ -82,8 +86,8 @@ class GameViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), MonsterPickerUiState(selected = selectedMonster.value))
 
     /** a une valeur egale a null tant qu'aucune partie n'est start. */
-    val gameUiState: StateFlow<GameUiState?> = combine(_game, fastBots) { game, fast ->
-        game?.toGameUiState(fast, game.botExplanation())
+    val gameUiState: StateFlow<GameUiState?> = combine(_game, fastBots, fleeCountdown) { game, fast, countdown ->
+        game?.toGameUiState(fast, game.botExplanation(), countdown)
     }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
 
