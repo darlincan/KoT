@@ -6,16 +6,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.neonkaiju.kot.model.TurnPhase
 
 @Composable
 fun PauseScreen(onResume: () -> Unit, onSaveAndQuit: () -> Unit, onHome: () -> Unit) {
     Column(Modifier.fillMaxSize().background(NeonPalette.Background).systemBarsPadding().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("PARTIE EN PAUSE", color = NeonPalette.NeonCyan, fontSize = 22.sp, lineHeight = 26.sp)
+        Text("PARTIE EN PAUSE", color = NeonPalette.NeonCyan, fontFamily = OrbitronFamily, fontSize = 22.sp, lineHeight = 26.sp)
         Text("Les bots attendent. Chaque action est sauvegardée automatiquement.", color = NeonPalette.TextPrimary, fontSize = 12.sp, lineHeight = 16.sp)
         NeonButton("Reprendre la partie", onClick = onResume)
         NeonButton("Sauvegarder et quitter", onClick = onSaveAndQuit)
@@ -25,21 +26,12 @@ fun PauseScreen(onResume: () -> Unit, onSaveAndQuit: () -> Unit, onHome: () -> U
 
 @Composable
 fun TurnStatusPanel(state: GameUiState, onEvent: (UiEvent) -> Unit) {
-    val phase = if (state.isChoosingPower) "Choisir un pouvoir de Surcharge" else when (state.phase) {
-        TurnPhase.LANCER -> "Lancer les dés"
-        TurnPhase.RESOUDRE -> "Résoudre les résultats"
-        TurnPhase.DECISION_FUITE -> "Fuir ou rester dans la Tour"
-        TurnPhase.ENTRER -> "Entrer dans la Tour"
-        TurnPhase.ACHETER -> "Acheter des cartes ou finir le tour"
-        TurnPhase.FIN_TOUR -> "Fin du tour"
-        TurnPhase.FIN_PARTIE -> "Partie terminée"
-    }
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         Column(Modifier.weight(1f)) {
             Text(state.botTurn?.let { "Tour de ${it.botName} — le bot joue" } ?: "À TON TOUR",
                 color = NeonPalette.NeonPink, fontWeight = FontWeight.Bold, fontSize = 12.sp, lineHeight = 14.sp)
-            Text(phase, color = NeonPalette.TextPrimary, fontSize = 11.sp, lineHeight = 13.sp)
+            Text(state.phaseLabel, color = NeonPalette.TextPrimary, fontSize = 11.sp, lineHeight = 13.sp)
         }
-        NeonButton("Pause", onClick = { onEvent(UiEvent.Pause) })
+        NeonButton("≡", onClick = { onEvent(UiEvent.Pause) }, modifier = Modifier.semantics { contentDescription = "Pause" })
     }
 }

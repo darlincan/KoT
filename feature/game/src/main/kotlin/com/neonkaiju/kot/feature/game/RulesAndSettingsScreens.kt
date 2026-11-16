@@ -105,7 +105,7 @@ fun RulesScreen(onBack: () -> Unit) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("RÈGLES", color = NeonPalette.NeonCyan, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text("RÈGLES", color = NeonPalette.NeonCyan, fontFamily = OrbitronFamily, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             NeonButton("Retour", onClick = onBack, accentColor = NeonPalette.NeonCyan)
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -155,7 +155,7 @@ fun SettingsScreen(state: SettingsUiState, onToggleFastBot: () -> Unit, onToggle
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("RÉGLAGES", color = NeonPalette.NeonCyan, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text("RÉGLAGES", color = NeonPalette.NeonCyan, fontFamily = OrbitronFamily, fontSize = 22.sp, fontWeight = FontWeight.Bold)
         SettingSwitchRow(
             title = "Bots rapides",
             description = "Raccourcit la pause entre les actions des bots.",
