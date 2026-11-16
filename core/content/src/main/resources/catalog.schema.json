@@ -66,7 +66,7 @@
       "properties": {
         "declencheur": {
           "enum": [
-            "ACHAT", "DEBUT_TOUR", "AVANT_LANCER", "APRES_RESOLUTION", "AVANT_DEGAT_SUBI",
+            "ACHAT", "DEBUT_TOUR", "AVANT_LANCER", "AVANT_RESOLUTION", "APRES_RESOLUTION", "AVANT_DEGAT_SUBI",
             "APRES_DEGAT_INFLIGE", "ENTREE_TOKYO", "FIN_TOUR", "PERMANENT"
           ]
         },

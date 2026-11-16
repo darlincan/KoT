@@ -34,7 +34,8 @@ object EffectInterpreter {
         val buyer = state.players.first { it.id == buyerId }
         val allEffects = buyer.cards.flatMap { it.effets } + buyer.tiles.flatMap { it.effets }
         val modifier = allEffects
-            .filter { it.declencheur == EffectTrigger.PERMANENT && it.operation == EffectOperation.modifyCost }
+            .filter { it.declencheur == EffectTrigger.PERMANENT && it.operation == EffectOperation.modifyCost &&
+                ConditionParser.evaluate(it.condition, state, buyerId) }
             .sumOf { it.valeur }
         return (card.cout + modifier).coerceAtLeast(1)
     }
@@ -76,16 +77,34 @@ object EffectInterpreter {
         val owner = state.players.firstOrNull { it.id == ownerId } ?: return state
         if (!owner.isAlive) return state
 
-        val effects = explicitEffects ?: (owner.cards.flatMap { it.effets } + owner.tiles.flatMap { it.effets })
-            .filter { it.declencheur == trigger && it.operation != EffectOperation.changerFace }
+        val effects = explicitEffects?.map { "Action" to it } ?: (
+            owner.cards.flatMap { card -> card.effets.map { card.nom to it } } +
+                owner.tiles.flatMap { tile -> tile.effets.map { tile.nom to it } }
+            ).filter { it.second.declencheur == trigger && it.second.operation != EffectOperation.changerFace }
 
         var current = state
-        for (effect in effects) {
+        for ((source, effect) in effects) {
             if (!ConditionParser.evaluate(effect.condition, current, ownerId)) continue
-            val targetIds = resolveTargets(current, ownerId, effect.cible)
-                .filter { restrictTo == null || it in restrictTo }
+            val targetIds = resolveTargets(current, ownerId, effect.cible).filter {
+                restrictTo == null || effect.cible != EffectTarget.AUTRES || it in restrictTo
+            }
             for (targetId in targetIds) {
+                val previous = current
+                val before = current.players.first { it.id == targetId }
                 current = executeOperation(current, ownerId, targetId, effect)
+                val after = current.players.first { it.id == targetId }
+                val description = when (effect.operation) {
+                    EffectOperation.gainVp -> "+${after.vp - before.vp} ★"
+                    EffectOperation.gainEnergy -> "+${after.energy - before.energy} Cellule(s)"
+                    EffectOperation.gainHp -> "+${after.hp - before.hp} ♥"
+                    EffectOperation.changerFace -> "un dé 1 devient une griffe"
+                    EffectOperation.setFlag -> "mode furie activé"
+                    EffectOperation.rerollDice -> "lancers disponibles : ${current.rollsLeft}"
+                    else -> null
+                }
+                if (current != previous && description != null) {
+                    current = current.copy(actionLog = current.actionLog + "${owner.monster.displayName} — $source : $description pour ${after.monster.displayName}")
+                }
             }
         }
         return current
@@ -122,18 +141,14 @@ object EffectInterpreter {
             EffectOperation.gainEnergy -> updatePlayer(state, targetId) {
                 it.copy(energy = (it.energy + effect.valeur).coerceAtLeast(0))
             }
-            EffectOperation.gainHp -> updatePlayer(state, targetId) {
-                it.copy(hp = (it.hp + effect.valeur).coerceIn(0, it.maxHp))
-            }
-            EffectOperation.dealDamage -> {
-                val reduction = computeDamageReduction(state, targetId)
-                val finalDamage = (effect.valeur - reduction).coerceAtLeast(0)
-                if (finalDamage == 0) state
-                else applyDirectDamage(state, targetId, finalDamage)
-            }
+            EffectOperation.gainHp -> if (effect.valeur < 0) applyDirectDamage(state, targetId, -effect.valeur)
+                else updatePlayer(state, targetId) {
+                    if (it.isAlive) it.copy(hp = (it.hp + effect.valeur).coerceAtMost(it.maxHp)) else it
+                }
+            EffectOperation.dealDamage -> applyDamage(state, targetId, effect.valeur)
             EffectOperation.rerollDice -> {
                 if (targetId == state.activePlayer.id) {
-                    state.copy(rollsLeft = state.rollsLeft + effect.valeur)
+                    state.copy(rollsLeft = (state.rollsLeft + effect.valeur).coerceIn(0, 3 - state.rollsMade))
                 } else state
             }
             EffectOperation.changerFace -> {
@@ -153,7 +168,22 @@ object EffectInterpreter {
         }
     }
 
+    /** Apply a single attack, consuming a first-damage shield even if it absorbs all damage. */
+    fun applyDamage(state: GameState, victimId: Int, amount: Int): GameState {
+        val prevented = minOf(amount.coerceAtLeast(0), computeDamageReduction(state, victimId))
+        var current = applyDirectDamage(state, victimId, (amount - prevented).coerceAtLeast(0))
+        if (prevented > 0) {
+            current = updatePlayer(current, victimId) { it.copy(damagePreventedThisTurn = it.damagePreventedThisTurn + prevented) }
+            val victim = current.players.first { it.id == victimId }
+            current = current.copy(actionLog = current.actionLog + "${victim.monster.displayName} : $prevented dégât(s) annulé(s) par ses protections")
+        }
+        return current
+    }
+
     fun applyDirectDamage(state: GameState, victimId: Int, amount: Int): GameState {
+        if (amount <= 0) return state
+        val victim = state.players.first { it.id == victimId }
+        if (!victim.isAlive) return state
         var updatedOccupant = state.tokyoOccupantId
         var discardedCards = emptyList<CardDef>()
         val newPlayers = state.players.map { p ->
@@ -176,10 +206,12 @@ object EffectInterpreter {
                 }
             }
         }
+        val after = newPlayers.first { it.id == victimId }
         return state.copy(
-            players = newPlayers, 
+            players = newPlayers,
             tokyoOccupantId = updatedOccupant,
-            discard = state.discard + discardedCards
+            discard = state.discard + discardedCards,
+            actionLog = state.actionLog + "${victim.monster.displayName} subit ${victim.hp - after.hp} dégât(s) : ${after.hp} ♥${if (!after.isAlive) " — éliminé" else ""}"
         )
     }
 

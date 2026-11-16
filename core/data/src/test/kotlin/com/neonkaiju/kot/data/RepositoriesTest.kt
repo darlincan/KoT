@@ -3,10 +3,17 @@ package com.neonkaiju.kot.data
 import com.neonkaiju.kot.content.CatalogData
 import com.neonkaiju.kot.engine.GameEngine
 import com.neonkaiju.kot.model.GameAction
+import com.neonkaiju.kot.model.GameState
 import com.neonkaiju.kot.model.MonsterId
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -60,10 +67,57 @@ class RepositoriesTest {
     }
 
     @Test
-    fun `corrupted save is ignored instead of crashing`() = runBlocking {
-        File(dir, "saved_game_v1.json").writeText("{ pas du json")
+    fun `corrupted save is ignored and deleted instead of crashing`() = runBlocking {
+        val file = File(dir, "saved_game_v1.json").apply { writeText("{ pas du json") }
 
         assertNull(repository().load())
+        assertFalse(file.exists())
+    }
+
+    @Test
+    fun `save file always contains the format version`() = runBlocking {
+        repository().save(newGame(ResourceCatalogRepository().catalog()))
+
+        val raw = Json.parseToJsonElement(File(dir, "saved_game_v1.json").readText()).jsonObject
+        assertEquals(GameState.CURRENT_VERSION, raw["version"]?.jsonPrimitive?.int)
+    }
+
+    @Test
+    fun `save from a newer app version is rejected and deleted`() = runBlocking {
+        val repository = repository()
+        repository.save(newGame(ResourceCatalogRepository().catalog()))
+        val file = File(dir, "saved_game_v1.json")
+        val raw = Json.parseToJsonElement(file.readText()).jsonObject
+        file.writeText(JsonObject(raw + ("version" to JsonPrimitive(GameState.CURRENT_VERSION + 1))).toString())
+
+        assertNull(repository.load())
+        assertFalse(file.exists())
+    }
+
+    @Test
+    fun `legacy save without version field is still restored`() = runBlocking {
+        val repository = repository()
+        val state = newGame(ResourceCatalogRepository().catalog())
+        repository.save(state)
+        val file = File(dir, "saved_game_v1.json")
+        file.writeText(JsonObject(Json.parseToJsonElement(file.readText()).jsonObject - "version").toString())
+
+        assertEquals(state, repository.load())
+    }
+
+    @Test
+    fun `v1 save is migrated to v2 with 3 rolls and bounded rerolls`() = runBlocking {
+        val repository = repository()
+        repository.save(newGame(ResourceCatalogRepository().catalog()))
+        val file = File(dir, "saved_game_v1.json")
+        val raw = Json.parseToJsonElement(file.readText()).jsonObject
+        file.writeText(JsonObject(raw + mapOf(
+            "version" to JsonPrimitive(1), "maxRolls" to JsonPrimitive(4), "rollsLeft" to JsonPrimitive(3)
+        )).toString())
+
+        val restored = repository.load()!!
+
+        assertEquals(listOf(2, 3, 2), listOf(restored.version, restored.maxRolls, restored.rollsLeft))
     }
 
     @Test

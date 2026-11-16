@@ -1,10 +1,12 @@
 package com.neonkaiju.kot.feature.game
 
 import androidx.lifecycle.SavedStateHandle
+import com.neonkaiju.kot.ai.BotPolicy
 import com.neonkaiju.kot.ai.HeuristicBotPolicy
 import com.neonkaiju.kot.content.CatalogData
 import com.neonkaiju.kot.content.CatalogLoader
 import com.neonkaiju.kot.data.CatalogRepository
+import com.neonkaiju.kot.data.FileGameRepository
 import com.neonkaiju.kot.data.GameRepository
 import com.neonkaiju.kot.data.Settings
 import com.neonkaiju.kot.data.SettingsRepository
@@ -12,11 +14,14 @@ import com.neonkaiju.kot.engine.GameEngine
 import com.neonkaiju.kot.model.GameAction
 import com.neonkaiju.kot.model.GameState
 import com.neonkaiju.kot.model.MonsterId
+import com.neonkaiju.kot.model.PendingFleeDecision
+import com.neonkaiju.kot.model.TurnPhase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -29,11 +34,16 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.io.File
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class GameViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
+
+    @TempDir
+    lateinit var dir: File
     private val catalog = CatalogLoader.loadCatalog()
 
     private class InMemoryGameRepository(var saved: GameState? = null) : GameRepository {
@@ -50,6 +60,7 @@ class GameViewModelTest {
         private val state = MutableStateFlow(Settings())
         override val settings: Flow<Settings> = state
         override suspend fun setFastBots(enabled: Boolean) { state.value = state.value.copy(fastBots = enabled) }
+        override suspend fun setFleeCountdown(enabled: Boolean) { state.value = state.value.copy(fleeCountdown = enabled) }
     }
 
     @BeforeEach
@@ -61,7 +72,8 @@ class GameViewModelTest {
     private fun TestScope.viewModel(
         repository: GameRepository,
         settings: SettingsRepository = InMemorySettingsRepository(),
-    ) = GameViewModel(SavedStateHandle(), repository, FixedCatalog(), settings, HeuristicBotPolicy(), seedProvider = { 42L }, appVersion = "test")
+        policy: BotPolicy = HeuristicBotPolicy(),
+    ) = GameViewModel(SavedStateHandle(), repository, FixedCatalog(), settings, policy, seedProvider = { 42L }, appVersion = "test")
         .also { runCurrent() }
 
     private fun newGame() = GameEngine.createGame(seed = 7L, humanMonster = MonsterId.VOLTRAX, catalog = catalog)
@@ -100,8 +112,9 @@ class GameViewModelTest {
         advanceTimeBy(5_000)
         assertEquals(botTurn, viewModel.game.value, "aucun bot ne joue écran caché")
 
+        val delay = botDelayMillis(HeuristicBotPolicy().chooseAction(botTurn), fast = false)
         viewModel.setBotsActive(true)
-        advanceTimeBy(GameViewModel.BOT_DELAY_MS - 1)
+        advanceTimeBy(delay - 1)
         assertEquals(botTurn, viewModel.game.value, "l'action du bot reste visible au moins le délai prévu")
 
         advanceTimeBy(2)
@@ -118,9 +131,142 @@ class GameViewModelTest {
         runCurrent()
         assertTrue(settings.settings.first().fastBots)
 
+        val delay = botDelayMillis(HeuristicBotPolicy().chooseAction(botTurn), fast = true)
         viewModel.setBotsActive(true)
-        advanceTimeBy(GameViewModel.FAST_BOT_DELAY_MS + 1)
+        advanceTimeBy(delay + 1)
         assertNotEquals(botTurn, viewModel.game.value)
+    }
+
+    @Test
+    fun `human action is ignored while a bot decides`() = runTest(dispatcher) {
+        val botTurn = newGame().copy(activePlayerIndex = 1)
+        val viewModel = viewModel(InMemoryGameRepository(botTurn))
+
+        viewModel.dispatch(GameAction.StopRolling)
+
+        assertEquals(botTurn, viewModel.game.value)
+    }
+
+    @Test
+    fun `action confirmed on an older state is ignored`() = runTest(dispatcher) {
+        val game = newGame()
+        val viewModel = viewModel(InMemoryGameRepository(game))
+
+        viewModel.dispatch(GameAction.StopRolling, expectedRevision = game.actionHistory.size + 1)
+        assertEquals(game, viewModel.game.value)
+
+        viewModel.dispatch(GameAction.StopRolling, expectedRevision = game.actionHistory.size)
+        assertNotEquals(game, viewModel.game.value)
+    }
+
+    @Test
+    fun `game screen state explains what the bot is doing`() = runTest(dispatcher) {
+        val botTurn = newGame().copy(activePlayerIndex = 1)
+        val viewModel = viewModel(InMemoryGameRepository(botTurn))
+        val job = backgroundScope.launch { viewModel.gameUiState.collect {} }
+        runCurrent()
+
+        val explanation = viewModel.gameUiState.value?.botTurn?.lastAction
+        assertFalse(explanation.isNullOrBlank())
+        job.cancel()
+    }
+
+    @Test
+    fun `flee countdown setting reaches the game screen state`() = runTest(dispatcher) {
+        val settings = InMemorySettingsRepository()
+        val viewModel = viewModel(InMemoryGameRepository(newGame()), settings)
+        backgroundScope.launch { viewModel.gameUiState.collect {} }
+        runCurrent()
+        assertEquals(false, viewModel.gameUiState.value?.countdownEnabled)
+
+        settings.setFleeCountdown(true)
+        runCurrent()
+
+        assertEquals(true, viewModel.gameUiState.value?.countdownEnabled)
+    }
+
+    @Test
+    fun `bot pacing leaves time to read and fast mode stays at 400 ms`() {
+        assertEquals(450L, botDelayMillis(GameAction.ToggleKeep(0), fast = false))
+        assertEquals(1800L, botDelayMillis(GameAction.Reroll, fast = false))
+        assertEquals(2200L, botDelayMillis(GameAction.EndTurn, fast = false))
+        assertEquals(400L, botDelayMillis(GameAction.EndTurn, fast = true))
+    }
+
+    @Test
+    fun `bot decides only once per state for the overlay and the move`() = runTest(dispatcher) {
+        var decisions = 0
+        val policy = object : BotPolicy {
+            private val delegate = HeuristicBotPolicy()
+            override fun chooseAction(state: GameState): GameAction { decisions++; return delegate.chooseAction(state) }
+        }
+        val botTurn = newGame().copy(activePlayerIndex = 1)
+        val viewModel = viewModel(InMemoryGameRepository(botTurn), policy = policy)
+        val job = backgroundScope.launch { viewModel.gameUiState.collect {} }
+        viewModel.setBotsActive(true)
+        runCurrent()
+
+        assertEquals(1, decisions)
+        job.cancel()
+    }
+
+    /** Sauvegarde sur disque puis recrée un ViewModel neuf, comme après l'arrêt du processus par le système. */
+    private suspend fun TestScope.restartWith(saved: GameState): GameViewModel {
+        val file = File(dir, "saved_game_v1.json")
+        FileGameRepository(file, dispatcher).save(saved)
+        return viewModel(FileGameRepository(file, dispatcher))
+    }
+
+    @Test
+    fun `process death during Flee or Stay restores the dialog and the decision still works`() = runTest(dispatcher) {
+        val game = newGame()
+        val human = game.players.first { !it.isBot }
+        val attacker = game.players.first { it.isBot }
+        val pending = game.copy(
+            activePlayerIndex = game.players.indexOf(attacker),
+            phase = TurnPhase.DECISION_FUITE,
+            tokyoOccupantId = human.id,
+            pendingFlee = PendingFleeDecision(attackerId = attacker.id, occupantId = human.id, damageTaken = 2),
+        )
+
+        val viewModel = restartWith(pending)
+        val job = backgroundScope.launch { viewModel.gameUiState.collect {} }
+        viewModel.setBotsActive(true)
+        advanceTimeBy(10_000)
+
+        assertEquals(pending, viewModel.game.value, "aucun bot ne joue à la place du joueur")
+        assertEquals(attacker.monster.displayName, viewModel.gameUiState.value?.flee?.attackerName)
+
+        viewModel.dispatch(GameAction.Stay)
+        assertNull(viewModel.game.value?.pendingFlee)
+        assertEquals(human.id, viewModel.game.value?.tokyoOccupantId)
+        job.cancel()
+    }
+
+    @Test
+    fun `process death during a tile choice restores the picker and the choice still works`() = runTest(dispatcher) {
+        val game = newGame()
+        val pending = game.copy(
+            activePlayerIndex = game.players.indexOfFirst { !it.isBot },
+            phase = TurnPhase.RESOUDRE,
+            unresolvedSymbols = emptySet(),
+            pendingMaliceLevels = listOf(3),
+        )
+        val tile = pending.availableTiles.first { it.niveau == 3 }
+
+        val viewModel = restartWith(pending)
+        val job = backgroundScope.launch { viewModel.gameUiState.collect {} }
+        runCurrent()
+
+        assertEquals(3, viewModel.gameUiState.value?.malicePick?.level)
+        assertTrue(viewModel.gameUiState.value?.malicePick?.tiles.orEmpty().any { it.id == tile.id })
+
+        viewModel.dispatch(GameAction.PickMaliceTile(tile.id))
+        val human = viewModel.game.value!!.players.first { !it.isBot }
+        assertTrue(human.tiles.any { it.id == tile.id })
+        runCurrent()
+        assertNull(viewModel.gameUiState.value?.malicePick)
+        job.cancel()
     }
 
     @Test

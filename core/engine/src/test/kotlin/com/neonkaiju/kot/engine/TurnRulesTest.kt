@@ -66,7 +66,6 @@ class TurnRulesTest {
     fun `RULE_14_crossing_level_3_offers_a_tile_of_that_level`() {
         var state = game().withPlayer(0) { it.copy(malice = 2) }.withDice(ONE, ONE, ONE, TWO, TWO, THREE)
         state = GameEngine.reduce(state, GameAction.StopRolling)
-        state = GameEngine.reduce(state, GameAction.ResolveSymbols(SymbolResolutionType.NUMBERS))
 
         assertEquals(listOf(3), state.pendingMaliceLevels)
         val offers = GameEngine.legalActions(state)
@@ -88,7 +87,6 @@ class TurnRulesTest {
             .withPlayer(0) { it.copy(malice = 2, unlockedMaliceLevels = setOf(3)) }
             .withDice(ONE, ONE, ONE, TWO, TWO, THREE)
         state = GameEngine.reduce(state, GameAction.StopRolling)
-        state = GameEngine.reduce(state, GameAction.ResolveSymbols(SymbolResolutionType.NUMBERS))
 
         assertTrue(state.pendingMaliceLevels.isEmpty())
         assertEquals(10, state.availableTiles.size)
@@ -98,7 +96,6 @@ class TurnRulesTest {
     fun `RULE_19_occupant_who_stays_keeps_tokyo_but_loses_hp`() {
         var state = game().copy(tokyoOccupantId = 1).withDice(CLAW, CLAW, CLAW, ONE, TWO, THREE)
         state = GameEngine.reduce(state, GameAction.StopRolling)
-        state = GameEngine.reduce(state, GameAction.ResolveSymbols(SymbolResolutionType.CLAWS))
         assertEquals(TurnPhase.DECISION_FUITE, state.phase)
 
         state = GameEngine.reduce(state, GameAction.Stay)
@@ -112,7 +109,6 @@ class TurnRulesTest {
     fun `RULE_23_hearts_do_not_heal_inside_tokyo`() {
         var state = game().copy(tokyoOccupantId = 0).withPlayer(0) { it.copy(hp = 5) }.withDice(HEART, HEART, HEART, ONE, TWO, THREE)
         state = GameEngine.reduce(state, GameAction.StopRolling)
-        state = GameEngine.reduce(state, GameAction.ResolveSymbols(SymbolResolutionType.HEARTS))
 
         assertEquals(5, state.player(0).hp)
     }

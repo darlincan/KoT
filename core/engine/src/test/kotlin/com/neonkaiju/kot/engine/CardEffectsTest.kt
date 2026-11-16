@@ -107,12 +107,14 @@ class CardEffectsTest {
     }
 
     @Test
-    fun `recalibrage_optique donne une relance de plus`() {
-        var s = game().giveCard(1, "recalibrage_optique").endTurn()
-        assertEquals(3, s.rollsLeft)
-        s = GameEngine.reduce(GameEngine.reduce(s, GameAction.Reroll), GameAction.Reroll)
-        assertEquals(TurnPhase.LANCER, s.phase)
-        assertTrue(GameAction.Reroll in GameEngine.legalActions(s))
+    fun `recalibrage_optique change un 1 en griffe avant le décompte`() {
+        val stopped = GameEngine.reduce(
+            game(occupant = 1).giveCard(0, "recalibrage_optique")
+                .copy(dice = listOf(ONE, ONE, CLAW, TWO, THREE, ENERGY).mapIndexed { i, f -> Die(i, f) }),
+            GameAction.StopRolling
+        )
+        assertEquals(1, stopped.dice.count { it.face == ONE })
+        assertEquals(2, stopped.dice.count { it.face == CLAW })
     }
 
     @Test

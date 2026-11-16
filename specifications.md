@@ -104,13 +104,14 @@ Les boutons pleins portent donc un libellé sombre. Cette règle est vérifiée 
 | Paramètre | Valeur | Justification |
 | --- | --- | --- |
 | `minSdk` | **29** (Android 10) | imposé par l'énoncé ; `java.time` natif, thème sombre système, stockage cloisonné |
-| `targetSdk` / `compileSdk` | 36 | exigence Play Store, API récentes |
-| Langage | Kotlin 2.2 | `value class`, `sealed interface`, sérialisation |
-| JDK | **21** (toolchain Gradle) | LTS, aligné avec AGP 8.x |
-| Build | Gradle 8.x + version catalog | dépendances centralisées dans `libs.versions.toml` |
+| `targetSdk` / `compileSdk` | 35 | API récentes, stables avec AGP 8.7 |
+| Langage | Kotlin 2.1 | `value class`, `sealed interface`, sérialisation |
+| JDK | **21** (toolchain Gradle) | LTS, aligné avec AGP 8.x ; téléchargé automatiquement par Gradle (foojay) s'il manque |
+| Build | Gradle 9.6 (wrapper) + version catalog | dépendances centralisées dans `libs.versions.toml` |
 | UI | Jetpack Compose + Material 3 | une seule description d'écran, pas de XML |
-| Orientation | `landscape` verrouillée | `android:screenOrientation="landscape"` dans le manifeste |
-| Sérialisation | kotlinx.serialization | état de partie en JSON versionné |
+| Architecture | MVVM : `ViewModel` + `StateFlow<UiState>`, Navigation Compose (routes typées) | l'état survit à la rotation ; les écrans ne calculent aucune règle |
+| Orientation | paysage verrouillé | `android:screenOrientation="sensorLandscape"` dans le manifeste : toujours en paysage, dans les deux sens (gauchers, câble de charge) |
+| Sérialisation | kotlinx.serialization | état de partie en JSON versionné (`GameState.CURRENT_VERSION`, migrations dans `FileGameRepository`) |
 | Injection | Hilt | permet d'injecter un générateur aléatoire fixe en test |
 | Persistance | DataStore (réglages) + fichier JSON (partie en cours) | pas de base de données nécessaire à ce périmètre |
 
@@ -122,7 +123,8 @@ Les boutons pleins portent donc un libellé sombre. Cette règle est vérifiée 
 :core:engine      moteur de règles — Kotlin/JVM pur, zéro import android.*
 :core:content     catalogue JSON des cartes et tuiles + interpréteur d'effets
 :core:ai          politiques de décision des bots
-:feature:game     écrans Compose
+:core:data        repositories : partie en cours (JSON), catalogue, réglages (DataStore)
+:feature:game     écrans Compose, ViewModels, UiState
 ```
 
 Règle d'or : `:core:engine` ne dépend d'aucune API Android. Il se teste en JVM, sans émulateur, et c'est ce qui rend le moteur vérifiable dans le temps imparti.
@@ -563,7 +565,7 @@ Tous les écrans sont en **paysage**. Chaque écran est un composable sans état
 - [x] **Bots** : un seul comportement, simple et conforme aux règles, pour les 3 bots. Pas de niveaux de difficulté : ils ne sont pas demandés.
 - [x] **Forme du rendu** : le dépôt GitHub, sans APK signé (§1).
 - [x] **Délai sur Fuir ou Rester** : **aucun délai par défaut**. Le choix revient au joueur ; le compte à rebours du wireframe est un ajout d'interface, facultatif, activable dans les réglages et coupé automatiquement quand TalkBack est actif (§9, règle 6).
-- [x] **Libellés de la jauge de Surcharge** : ils annoncent un choix de tuile (« Palier 3 : choisir un pouvoir »), pas un effet fixe, conformément à RULE-14. L'écran 06 du wireframe, qui affiche une récompense fixe par palier, doit être corrigé.
+- [x] **Libellés de la jauge de Surcharge** : ils annoncent un choix de tuile (« Palier 3 : choisir un pouvoir »), pas un effet fixe, conformément à RULE-14. L'écran 06 du wireframe est corrigé en portrait et en paysage : chaque palier (3 / 6 / 10) annonce « Choisir un pouvoir » et les choix présentés sont identifiés comme les pouvoirs disponibles du palier atteint, avec à part les pouvoirs déjà détenus (§9).
 
 ### À demander à l'enseignant (un seul message)
 

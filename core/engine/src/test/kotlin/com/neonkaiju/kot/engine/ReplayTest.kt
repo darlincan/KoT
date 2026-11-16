@@ -27,12 +27,12 @@ class ReplayTest {
     @Test
     fun `REPLAY_01_reduce_records_every_action_in_history`() {
         var state = GameEngine.createGame(42L, MonsterId.VOLTRAX, catalog)
-        assertTrue(state.history.isEmpty())
+        assertTrue(state.actionHistory.isEmpty())
 
         state = GameEngine.reduce(state, GameAction.ToggleKeep(0))
         state = GameEngine.reduce(state, GameAction.Reroll)
 
-        assertEquals(listOf(GameAction.ToggleKeep(0), GameAction.Reroll), state.history)
+        assertEquals(listOf(GameAction.ToggleKeep(0), GameAction.Reroll), state.actionHistory)
     }
 
     @Test
@@ -42,7 +42,7 @@ class ReplayTest {
 
         assertEquals(7L, journal.seed)
         assertEquals(MonsterId.HYDROKOR, journal.humanMonster)
-        assertEquals(state.history, journal.actions)
+        assertEquals(state.actionHistory, journal.actions)
     }
 
     @Test

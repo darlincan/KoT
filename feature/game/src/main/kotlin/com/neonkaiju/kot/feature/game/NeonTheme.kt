@@ -2,6 +2,12 @@ package com.neonkaiju.kot.feature.game
 
 import android.os.Build
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -60,6 +66,7 @@ fun Modifier.neonGlow(color: Color, active: Boolean = true): Modifier = this.dra
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun NeonButton(
     text: String,
@@ -71,7 +78,8 @@ fun NeonButton(
     onDisabledLongPress: (String) -> Unit = {}
 ) {
     val bgColor = if (enabled) accentColor else NeonPalette.Surface
-    val textColor = if (enabled) NeonPalette.DarkLabel else NeonPalette.TextPrimary.copy(alpha = 0.45f)
+    // 0,55 : le libellé d'un bouton grisé garde un contraste d'au moins 4,5:1 sur la surface.
+    val textColor = if (enabled) NeonPalette.DarkLabel else NeonPalette.TextPrimary.copy(alpha = 0.55f)
 
     Box(
         modifier = modifier
@@ -79,16 +87,17 @@ fun NeonButton(
             .neonGlow(accentColor, active = enabled && Build.VERSION.SDK_INT >= 29)
             .background(bgColor, RoundedCornerShape(8.dp))
             .border(1.dp, if (enabled) accentColor else accentColor.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-            .pointerInput(enabled, disabledReason) {
-                detectTapGestures(
-                    onTap = { if (enabled) onClick() },
-                    onLongPress = {
-                        if (!enabled && !disabledReason.isNullOrBlank()) {
-                            onDisabledLongPress(disabledReason)
-                        }
-                    }
-                )
+            .semantics {
+                if (!enabled) {
+                    disabled()
+                    disabledReason?.let { stateDescription = it }
+                }
             }
+            .combinedClickable(
+                role = Role.Button,
+                onClick = { if (enabled) onClick() },
+                onLongClick = { if (!enabled && !disabledReason.isNullOrBlank()) onDisabledLongPress(disabledReason) }
+            )
             .padding(horizontal = 14.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -97,6 +106,8 @@ fun NeonButton(
             color = textColor,
             fontWeight = FontWeight.Bold,
             fontSize = 13.sp,
+            lineHeight = 16.sp,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             fontFamily = FontFamily.SansSerif
         )
     }

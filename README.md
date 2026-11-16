@@ -58,7 +58,7 @@ Le moteur s'utilise à travers trois fonctions de `GameEngine` :
 ### Déterminisme et rejeu
 
 Tout le hasard passe par le générateur stocké dans `GameState` (graine et curseur). Chaque action
-acceptée par `reduce` est ajoutée à `GameState.history`.
+acceptée par `reduce` est ajoutée à `GameState.actionHistory`.
 
 - `GameEngine.journalOf(state)` produit un `GameJournal` sérialisable : graine, monstre du joueur et
   liste des actions. Il est à joindre à tout rapport de bug.
@@ -93,3 +93,14 @@ Le catalogue est validé à chaque build, à trois niveaux :
 
 Les wireframes des 7 écrans, en paysage, sont dans
 [`wireframes/theme1-neon-kaiju.html`](wireframes/theme1-neon-kaiju.html).
+
+## Sauvegarde
+
+La partie est sauvegardée automatiquement après chaque action. Le bouton Pause suspend les bots et permet de reprendre, de sauvegarder et quitter ou de revenir à l’accueil. Les décisions de fuite et de Surcharge restent celles du joueur humain, sans délai imposé.
+
+## Documentation complémentaire
+
+- [Audit, corrections et validation](VALIDATION.md)
+- [Nouvelle analyse du marché, des ressources et de l’architecture](docs/reanalyse-marche-et-tours.md)
+- [Stratégie réelle des bots et exemples vérifiés](docs/strategie-bots.md)
+- [Graines, contrôles statistiques et rejeu](docs/aleatoire-et-rejeu.md)

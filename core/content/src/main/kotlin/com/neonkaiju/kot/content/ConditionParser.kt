@@ -23,7 +23,7 @@ enum class ConditionType { INT, BOOL }
 
 /** Variables lisibles par une condition, toujours du point de vue du propriétaire de l'effet. */
 enum class ConditionVariable(val key: String, val type: ConditionType, val read: (GameState, PlayerState) -> Any) {
-    DEGATS_SUBIS("degatsSubisCeTour", ConditionType.INT, { _, p -> p.damageTakenThisTurn }),
+    DEGATS_SUBIS("degatsSubisCeTour", ConditionType.INT, { _, p -> p.damageTakenThisTurn + p.damagePreventedThisTurn }),
     DANS_TOKYO("estDansTokyo", ConditionType.BOOL, { s, p -> s.tokyoOccupantId == p.id }),
     ENERGIE("energie", ConditionType.INT, { _, p -> p.energy }),
     HP("hp", ConditionType.INT, { _, p -> p.hp }),
