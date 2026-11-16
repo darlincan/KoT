@@ -247,8 +247,21 @@ object GameEngine {
         return after
     }
 
+    fun journalOf(state: GameState): GameJournal = GameJournal(
+        seed = state.rng.seed,
+        humanMonster = state.players.first { !it.isBot }.monster,
+        actions = state.actionHistory
+    )
+
+    /**
+     * Rejoue une partie depuis sa graine. Chaque action repasse par [reduce] :
+     * un journal falsifié ou issu d'une autre version des règles lève [IllegalActionException].
+     */
+    fun replay(journal: GameJournal, catalog: CatalogData): GameState =
+        journal.actions.fold(createGame(journal.seed, journal.humanMonster, catalog), ::reduce)
+
     private fun transitionToResolve(before: GameState): GameState {
-        val state = EffectInterpreter.applyTrigger(before.copy(resolutionLogStart = before.actionLog.size,
+        val state = EffectInterpreter.applyTrigger(EffectInterpreter.applyFaceChanges(before, before.activePlayer.id).copy(resolutionLogStart = before.actionLog.size,
             lastResolutionGains = before.lastResolutionGains + (before.activePlayer.id to ResolutionGains())), EffectTrigger.AVANT_RESOLUTION, before.activePlayer.id)
         val presentTypes = mutableSetOf<SymbolResolutionType>()
         val counts = state.dice.groupingBy { it.face }.eachCount()
@@ -337,7 +350,7 @@ object GameEngine {
                             val targetAfter = current.players.first { it.id == tid }
                             current = current.copy(actionLog = current.actionLog + "${active.monster.displayName} → ${targetAfter.monster.displayName} : ${targetBefore.hp - targetAfter.hp} dégât(s), ${targetBefore.hp} → ${targetAfter.hp} ♥")
                         }
-                        if (damaged.isNotEmpty()) current = EffectInterpreter.applyTrigger(current, EffectTrigger.APRES_DEGAT_INFLIGE, active.id, damagedPlayerIds = damaged)
+                        if (damaged.isNotEmpty()) current = EffectInterpreter.applyTrigger(current, EffectTrigger.APRES_DEGAT_INFLIGE, active.id, restrictTo = damaged)
                         current = current.copy(actionLog = current.actionLog + "${active.monster.displayName} frappe toute la ville ($claws 🐾)")
                     } else {
                         val occupantId = current.tokyoOccupantId
@@ -347,7 +360,7 @@ object GameEngine {
                             val hpBefore = current.players.first { it.id == occupantId }.hp
                             current = EffectInterpreter.applyDamage(current, occupantId, claws)
                             if (dmg > 0) {
-                                current = EffectInterpreter.applyTrigger(current, EffectTrigger.APRES_DEGAT_INFLIGE, active.id, damagedPlayerIds = setOf(occupantId))
+                                current = EffectInterpreter.applyTrigger(current, EffectTrigger.APRES_DEGAT_INFLIGE, active.id, restrictTo = setOf(occupantId))
                                 val occupantAfter = current.players.first { it.id == occupantId }
                                 if (occupantAfter.isAlive) {
                                     return current.copy(

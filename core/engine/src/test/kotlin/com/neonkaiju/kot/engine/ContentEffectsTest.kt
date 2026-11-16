@@ -22,7 +22,7 @@ class ContentEffectsTest {
         val ids = catalog.cards.map { it.id } + catalog.tiles.map { it.id }
         assertEquals(30, ids.distinct().size)
         assertThrows(IllegalArgumentException::class.java) { ConditionParser.evaluate("hp", fixture(), 0) }
-        assertThrows(IllegalStateException::class.java) { ConditionParser.evaluate("unknown == 1", fixture(), 0) }
+        assertThrows(IllegalArgumentException::class.java) { ConditionParser.evaluate("unknown == 1", fixture(), 0) }
     }
 
     @TestFactory fun every_card_and_tile_has_verified_behavior() =
@@ -39,7 +39,9 @@ class ContentEffectsTest {
                 })
                 if (id in listOf("piratage_neural", "drones_sentinelles", "protocole_berserk", "tile_3_impulsion", "tile_6_predateur_neon")) before = before.copy(tokyoOccupantId = 0)
                 val trigger = effects.first().declencheur
-                val after = EffectInterpreter.applyTrigger(before, trigger, 0)
+                // changerFace est appliqué au moment où les dés sont figés, pas par son déclencheur.
+                val after = if (effects.first().operation == EffectOperation.changerFace) EffectInterpreter.applyFaceChanges(before, 0)
+                    else EffectInterpreter.applyTrigger(before, trigger, 0)
                 when (id) {
                     "blindage_reactif" -> {
                         assertEquals(1, EffectInterpreter.computeDamageReduction(before, 0))
@@ -68,7 +70,7 @@ class ContentEffectsTest {
                     "protocole_berserk" -> { assertEquals(listOf(5, 4, 4, 4), after.players.map { it.hp }); assertTrue("FLAG_1" in after.activePlayer.flags) }
                     "extraction_miniere" -> { assertEquals(5, after.activePlayer.vp); assertEquals(9, after.activePlayer.energy) }
                     "regenerateur_cellulaire", "tile_3_blindage_leger" -> assertEquals(6, after.activePlayer.hp)
-                    "canon_railgun" -> { assertEquals(7, after.activePlayer.vp); assertEquals(listOf(3, 5, 3, 3), after.players.map { it.hp }) }
+                    "canon_railgun" -> { assertEquals(7, after.activePlayer.vp); assertEquals(listOf(5, 5, 3, 3), after.players.map { it.hp }) }
                     "tile_3_impulsion" -> assertEquals(listOf(5, 4, 4, 4), after.players.map { it.hp })
                     "tile_6_bouclier_deflecteur" -> assertEquals(1, EffectInterpreter.computeDamageReduction(before, 0))
                     "tile_6_reacteur_fusion" -> assertEquals(10, after.activePlayer.energy)
@@ -96,7 +98,8 @@ class ContentEffectsTest {
         base = base.copy(tokyoOccupantId = null, players = base.players.map { if (it.id == 0) it.copy(tiles = listOf(impulse)) else it.copy(hp = 1) }, dice = List(6) { Die(it, DieFace.ENERGY) })
         val win = GameEngine.reduce(base, GameAction.StopRolling)
         assertEquals(TurnPhase.FIN_PARTIE, win.phase); assertEquals(0, win.winnerId)
-        val railgun = catalog.cards.first { it.id == "canon_railgun" }
+        // Carte d'essai qui blesse aussi son acheteur : le Railgun du catalogue épargne désormais l'acheteur.
+        val railgun = catalog.cards.first { it.id == "canon_railgun" }.let { c -> c.copy(effets = c.effets.map { e -> if (e.operation == EffectOperation.dealDamage) e.copy(cible = EffectTarget.TOUS) else e }) }
         val self = fixture().copy(phase = TurnPhase.ACHETER, shop = listOf(railgun), players = fixture().players.map { if (it.id == 0) it.copy(hp = 2) else it })
         val result = GameEngine.reduce(self, GameAction.BuyCard(railgun.id))
         assertFalse(result.players[0].isAlive); assertEquals(1, result.activePlayer.id)

@@ -38,7 +38,7 @@
       "cout": 4,
       "type": "POUVOIR",
       "texte": "Au premier lancer de votre tour, change un dé 1 en griffe.",
-      "effets": [{ "declencheur": "AVANT_LANCER", "cible": "SOI", "operation": "changerFace", "valeur": 1 }]
+      "effets": [{ "declencheur": "APRES_RESOLUTION", "cible": "SOI", "operation": "changerFace", "valeur": 1 }]
     },
     {
       "id": "piratage_neural",
@@ -124,7 +124,7 @@
       "cout": 4,
       "type": "POUVOIR",
       "texte": "Change un dé 1 en griffe lors de la résolution.",
-      "effets": [{ "declencheur": "AVANT_RESOLUTION", "cible": "SOI", "operation": "changerFace", "valeur": 1 }]
+      "effets": [{ "declencheur": "APRES_RESOLUTION", "cible": "SOI", "operation": "changerFace", "valeur": 1 }]
     },
     {
       "id": "balise_neon",
@@ -169,7 +169,7 @@
       "nom": "Canon Railgun",
       "cout": 7,
       "type": "ACTION",
-      "texte": "Gagnez 3 ★ et infligez 2 dégâts à tous les monstres hors de la Tour.",
+      "texte": "Gagnez 3 ★ et infligez 2 dégâts à tous les autres monstres hors de la Tour.",
       "effets": [
         { "declencheur": "ACHAT", "cible": "SOI", "operation": "gainVp", "valeur": 3 },
         { "declencheur": "ACHAT", "cible": "HORS_TOKYO", "operation": "dealDamage", "valeur": 2 }
