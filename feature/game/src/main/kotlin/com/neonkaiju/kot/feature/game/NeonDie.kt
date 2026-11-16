@@ -4,7 +4,8 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
@@ -31,6 +32,8 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -44,8 +47,15 @@ private const val FACE_CHANGE_MS = 180
  * Dé en verre lumineux : rose et cadenas si gardé, cyan sinon ; grisé et sans lueur quand il n'est
  * pas modifiable. La lueur vient de [neonGlow] (flou à partir de l'API 31, dégradé en dessous).
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun NeonDieView(die: DieUi, modifier: Modifier = Modifier, onClick: () -> Unit) {
+fun NeonDieView(
+    die: DieUi,
+    modifier: Modifier = Modifier,
+    disabledReason: String? = null,
+    onDisabledLongPress: (String) -> Unit = {},
+    onClick: () -> Unit,
+) {
     val symbol = when (die.face) {
         DieFace.ONE -> "1"
         DieFace.TWO -> "2"
@@ -98,7 +108,13 @@ fun NeonDieView(die: DieUi, modifier: Modifier = Modifier, onClick: () -> Unit) 
                 scaleX = scale.value
                 scaleY = scale.value
             }
-            .semantics { contentDescription = a11y }
+            .semantics {
+                contentDescription = a11y
+                if (!die.canToggle) {
+                    disabled()
+                    disabledReason?.let { stateDescription = it }
+                }
+            }
             .neonGlow(accent, active = die.canToggle)
             .background(NeonPalette.Surface, RoundedCornerShape(8.dp))
             .background(glass, RoundedCornerShape(8.dp))
@@ -113,10 +129,17 @@ fun NeonDieView(die: DieUi, modifier: Modifier = Modifier, onClick: () -> Unit) 
                 )
             }
             .border(2.dp, border, RoundedCornerShape(8.dp))
-            .clickable(enabled = die.canToggle, role = Role.Button) {
-                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                onClick()
-            }
+            .combinedClickable(
+                role = Role.Button,
+                onClick = {
+                    if (die.canToggle) {
+                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onClick()
+                    }
+                },
+                // Règle transverse n° 2 : un dé non modifiable explique pourquoi au toucher long.
+                onLongClick = { if (!die.canToggle) disabledReason?.let(onDisabledLongPress) },
+            )
             .padding(6.dp),
         contentAlignment = Alignment.Center
     ) {

@@ -57,7 +57,7 @@ class BotTurnPresenterTest {
     }
 
     @Test fun normal_pacing_prioritizes_rolls_and_end_summary_while_fast_remains_available() {
-        assertEquals(450L, presenter.delayMillis(GameAction.ToggleKeep(0), false))
+        assertEquals(900L, presenter.delayMillis(GameAction.ToggleKeep(0), false))
         assertEquals(1800L, presenter.delayMillis(GameAction.Reroll, false))
         assertEquals(1800L, presenter.delayMillis(GameAction.BuyCard("coeur_nucleaire"), false))
         assertEquals(2200L, presenter.delayMillis(GameAction.EndTurn, false))

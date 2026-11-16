@@ -24,6 +24,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.neonkaiju.kot.model.*
@@ -31,6 +32,9 @@ import kotlinx.coroutines.delay
 
 /** Durée du compte à rebours optionnel de Fuir ou Rester (wireframe 05). */
 const val FLEE_COUNTDOWN_SECONDS = 6
+
+/** Hauteur à partir de laquelle la Tour affiche aussi son anneau. */
+private val TOWER_ROOMY_HEIGHT = 300.dp
 
 /** Lignes du résumé affichées dans la fenêtre : aucun écran ne défile (règle transverse n° 3). */
 private const val SUMMARY_MAX_LINES = 8
@@ -173,6 +177,7 @@ fun MonsterPickerScreen(
                 }
             }
         }
+    
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -242,7 +247,6 @@ fun GameScreen(
 ) {
     var tooltipMessage by remember { mutableStateOf<String?>(null) }
     var showSummary by remember { mutableStateOf(false) }
-
     val isPortrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
     val me = state.me
     val opponents = state.opponents
@@ -293,6 +297,7 @@ fun GameScreen(
                     }
                 }
             }
+        
         }
 
         tooltipMessage?.let { msg ->
@@ -339,43 +344,50 @@ fun GameScreen(
     }
 }
 
-/** La Tour centrale : occupant, bonus et, selon le tour, le résumé ou le bandeau du bot. */
+/**
+ * La Tour centrale. L'occupant, ses ♥ et ses ★ restent toujours visibles en haut ; le bas (bandeau du bot
+ * ou résumé) prend la place restante et s'abrège si besoin. L'anneau est retiré quand la hauteur manque.
+ */
 @Composable
 internal fun TowerPanel(state: GameUiState, onEvent: (UiEvent) -> Unit, onOpenSummary: () -> Unit, modifier: Modifier) {
     val occupant = state.tokyoOccupant
-    Box(
+    BoxWithConstraints(
         modifier = modifier
             .background(NeonPalette.Surface, RoundedCornerShape(12.dp))
             .border(2.dp, NeonPalette.NeonCyan, RoundedCornerShape(12.dp))
-            .padding(12.dp),
-        contentAlignment = Alignment.Center
+            .padding(10.dp)
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(stringResource(R.string.tower_title), color = NeonPalette.NeonCyan, fontFamily = OrbitronFamily, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
-            Spacer(Modifier.height(6.dp))
-            TowerRing(occupant?.monster)
-            Spacer(Modifier.height(6.dp))
+        val roomy = maxHeight >= TOWER_ROOMY_HEIGHT
+        Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(stringResource(R.string.tower_title), color = NeonPalette.NeonCyan, fontFamily = OrbitronFamily, fontWeight = FontWeight.ExtraBold,
+                fontSize = if (roomy) 18.sp else 15.sp, maxLines = 1)
+            if (roomy) TowerRing(occupant?.monster)
             if (occupant != null) {
-                Text(stringResource(R.string.tower_occupant, occupant.name), color = NeonPalette.NeonPink, fontFamily = OrbitronFamily, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                Text(stringResource(R.string.tower_stats, occupant.hp, occupant.vp), color = NeonPalette.TextPrimary, fontSize = 14.sp)
-                Text(stringResource(R.string.tower_bonus), color = NeonPalette.TextPrimary, fontSize = 12.sp)
+                Text(stringResource(R.string.tower_occupant, occupant.name), color = NeonPalette.NeonPink, fontFamily = OrbitronFamily,
+                    fontSize = if (roomy) 20.sp else 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                Text(stringResource(R.string.tower_stats, occupant.hp, occupant.vp), color = NeonPalette.TextPrimary, fontSize = 14.sp, maxLines = 1)
+                Text(stringResource(R.string.tower_bonus), color = NeonPalette.TextPrimary, fontSize = 12.sp, maxLines = 1)
             } else {
-                Text(stringResource(R.string.tower_free), color = NeonPalette.TextPrimary.copy(alpha = 0.7f), fontSize = 14.sp)
+                Text(stringResource(R.string.tower_free), color = NeonPalette.TextPrimary.copy(alpha = 0.7f), fontSize = 14.sp, maxLines = 1)
             }
-            Spacer(Modifier.height(4.dp))
-            val botTurn = state.botTurn
-            if (botTurn != null) {
-                BotTurnOverlay(botTurn, state.isBotFastForward, { onEvent(UiEvent.ToggleFastBot) })
-            } else {
-                Text(stringResource(R.string.summary_hint), color = NeonPalette.NeonCyan, fontSize = 11.sp,
-                    modifier = Modifier.heightIn(min = 48.dp).clickable(onClick = onOpenSummary))
-                Text(
-                    text = state.summary.takeLast(3).joinToString("\n"),
-                    color = NeonPalette.NeonCyan,
-                    fontSize = 12.sp,
-                    lineHeight = 15.sp,
-                    maxLines = 3
-                )
+            Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                val botTurn = state.botTurn
+                if (botTurn != null) {
+                    BotTurnOverlay(botTurn, state.isBotFastForward, { onEvent(UiEvent.ToggleFastBot) }, Modifier.fillMaxWidth())
+                } else {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(stringResource(R.string.summary_hint), color = NeonPalette.NeonCyan, fontSize = 11.sp,
+                            modifier = Modifier.heightIn(min = 48.dp).clickable(onClick = onOpenSummary))
+                        Text(
+                            text = state.summary.takeLast(3).joinToString("\n"),
+                            color = NeonPalette.NeonCyan,
+                            fontSize = 12.sp,
+                            lineHeight = 15.sp,
+                            maxLines = 3,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
             }
         }
     }
@@ -529,7 +541,8 @@ fun BotTurnOverlay(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text(stringResource(R.string.bot_overlay, botTurn.botName, detail), color = NeonPalette.TextPrimary, fontSize = 12.sp, lineHeight = 14.sp, maxLines = 4, modifier = Modifier.weight(1f))
+        Text(stringResource(R.string.bot_overlay, botTurn.botName, detail), color = NeonPalette.TextPrimary, fontSize = 12.sp, lineHeight = 14.sp,
+            maxLines = 4, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
         NeonButton(
             text = stringResource(if (isFast) R.string.bot_fast_on else R.string.bot_fast_off),
             onClick = onToggleFast,
@@ -648,6 +661,7 @@ fun MalicePickerSheet(
                     }
                 }
             }
+        
             Text(
                 text = stringResource(if (pick.ownedTiles.isEmpty()) R.string.malice_owned_none else R.string.malice_owned),
                 color = NeonPalette.NeonCyan,

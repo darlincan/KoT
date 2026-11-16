@@ -18,7 +18,8 @@ class BotTurnPresenter(private val policy: BotPolicy = HeuristicBotPolicy()) {
 
     fun delayMillis(action: GameAction, fast: Boolean): Long = when {
         fast -> 400L
-        action is GameAction.ToggleKeep -> 450L
+        // Chaque dé gardé reste visible assez longtemps pour suivre le choix du bot.
+        action is GameAction.ToggleKeep -> 900L
         action == GameAction.EndTurn -> 2200L // Leave the resolved results on screen before changing player.
         else -> 1800L // Rolls, resolution, purchases and Tokyo decisions.
     }

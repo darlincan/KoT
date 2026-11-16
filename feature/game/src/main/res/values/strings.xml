@@ -117,6 +117,7 @@
     <string name="dice_resolved">Dés résolus. Achetez des cartes ou terminez le tour.</string>
     <string name="decision_pending">Décision en cours…</string>
     <string name="action_end_turn">Fin du tour</string>
+    <string name="order_blocked">L’ordre se modifie pendant vos lancers, avant de résoudre</string>
     <string name="order_title">Ordre de résolution automatique</string>
     <string name="order_hint">Choisissez les quatre catégories dans l’ordre souhaité.</string>
     <string name="order_confirm">Confirmer</string>
