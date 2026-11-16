@@ -12,6 +12,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -20,8 +21,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.neonkaiju.kot.model.*
-import androidx.compose.ui.platform.LocalConfiguration
-import android.content.res.Configuration
 import android.view.accessibility.AccessibilityManager
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.delay
@@ -52,77 +51,39 @@ fun HomeScreen(
 ) {
     val canResume = state.canResume
     val version = state.version
-    val isPortrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
 
-    if (isPortrait) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(NeonPalette.Background)
-                .padding(24.dp),
-            verticalArrangement = Arrangement.SpaceEvenly,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("NÉON KAIJU", color = NeonPalette.NeonCyan, fontSize = 36.sp, fontWeight = FontWeight.ExtraBold)
-                Text("LA TOUR CENTRALE VOUS ATTEND", color = NeonPalette.TextPrimary, fontSize = 16.sp)
-                Spacer(Modifier.height(16.dp))
-                Text("Version $version • Édition Sombre", color = NeonPalette.NeonPink, fontSize = 12.sp)
-            }
-            Column(
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                NeonButton("Nouvelle Partie", onClick = { onEvent(UiEvent.NewGame) }, modifier = Modifier.fillMaxWidth(0.8f))
-                NeonButton(
-                    "Reprendre",
-                    onClick = { onEvent(UiEvent.Resume) },
-                    enabled = canResume,
-                    accentColor = NeonPalette.NeonCyan,
-                    disabledReason = "Aucune partie sauvegardée en cours",
-                    modifier = Modifier.fillMaxWidth(0.8f)
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth(0.8f)) {
-                    NeonButton("Règles", onClick = { onEvent(UiEvent.OpenRules) }, modifier = Modifier.weight(1f), accentColor = NeonPalette.NeonCyan)
-                    NeonButton("Réglages", onClick = { onEvent(UiEvent.OpenSettings) }, modifier = Modifier.weight(1f), accentColor = NeonPalette.NeonCyan)
-                }
-            }
+    Row(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(NeonPalette.Background)
+            .systemBarsPadding()
+            .padding(24.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text("NÉON KAIJU", color = NeonPalette.NeonCyan, fontSize = 36.sp, fontWeight = FontWeight.ExtraBold)
+            Text("LA TOUR CENTRALE VOUS ATTEND", color = NeonPalette.TextPrimary, fontSize = 16.sp)
+            Spacer(Modifier.height(16.dp))
+            Text("Version $version • Édition Sombre", color = NeonPalette.NeonPink, fontSize = 12.sp)
         }
-    } else {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(NeonPalette.Background)
-                .systemBarsPadding()
-                .padding(24.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalAlignment = Alignment.End
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text("NÉON KAIJU", color = NeonPalette.NeonCyan, fontSize = 36.sp, fontWeight = FontWeight.ExtraBold)
-                Text("LA TOUR CENTRALE VOUS ATTEND", color = NeonPalette.TextPrimary, fontSize = 16.sp)
-                Spacer(Modifier.height(16.dp))
-                Text("Version $version • Édition Sombre", color = NeonPalette.NeonPink, fontSize = 12.sp)
-            }
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                horizontalAlignment = Alignment.End
-            ) {
-                NeonButton("Nouvelle Partie", onClick = { onEvent(UiEvent.NewGame) }, modifier = Modifier.fillMaxWidth(0.8f))
-                NeonButton(
-                    "Reprendre",
-                    onClick = { onEvent(UiEvent.Resume) },
-                    enabled = canResume,
-                    accentColor = NeonPalette.NeonCyan,
-                    disabledReason = "Aucune partie sauvegardée en cours",
-                    modifier = Modifier.fillMaxWidth(0.8f)
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth(0.8f)) {
-                    NeonButton("Règles", onClick = { onEvent(UiEvent.OpenRules) }, modifier = Modifier.weight(1f), accentColor = NeonPalette.NeonCyan)
-                    NeonButton("Réglages", onClick = { onEvent(UiEvent.OpenSettings) }, modifier = Modifier.weight(1f), accentColor = NeonPalette.NeonCyan)
-                }
+            NeonButton("Nouvelle Partie", onClick = { onEvent(UiEvent.NewGame) }, modifier = Modifier.fillMaxWidth(0.8f))
+            NeonButton(
+                "Reprendre",
+                onClick = { onEvent(UiEvent.Resume) },
+                enabled = canResume,
+                accentColor = NeonPalette.NeonCyan,
+                disabledReason = "Aucune partie sauvegardée en cours",
+                modifier = Modifier.fillMaxWidth(0.8f)
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth(0.8f)) {
+                NeonButton("Règles", onClick = { onEvent(UiEvent.OpenRules) }, modifier = Modifier.weight(1f), accentColor = NeonPalette.NeonCyan)
+                NeonButton("Réglages", onClick = { onEvent(UiEvent.OpenSettings) }, modifier = Modifier.weight(1f), accentColor = NeonPalette.NeonCyan)
             }
         }
     }
@@ -134,7 +95,6 @@ fun MonsterPickerScreen(
     onEvent: (UiEvent) -> Unit
 ) {
     val selectedMonster = state.selected
-    val isPortrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
 
     Column(
         modifier = Modifier
@@ -145,65 +105,35 @@ fun MonsterPickerScreen(
     ) {
         Text("CHOISISSEZ VOTRE KAIJU BIO-MÉCANIQUE", color = NeonPalette.NeonCyan, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         
-        if (isPortrait) {
-            Column(
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                state.monsters.forEach { monster ->
-                    val isSelected = monster == selectedMonster
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                            .background(NeonPalette.Surface, RoundedCornerShape(10.dp))
-                            .border(
-                                width = if (isSelected) 3.dp else 1.dp,
-                                color = if (isSelected) NeonPalette.NeonPink else NeonPalette.NeonCyan.copy(alpha = 0.3f),
-                                shape = RoundedCornerShape(10.dp)
-                            )
-                            .clickable { onEvent(UiEvent.PickMonster(monster)) }
-                            .padding(10.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(monster.displayName, color = NeonPalette.TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            Spacer(Modifier.height(6.dp))
-                            Text(if (isSelected) "SÉLECTIONNÉ" else "DISPONIBLE", color = if (isSelected) NeonPalette.NeonPink else NeonPalette.NeonCyan, fontSize = 11.sp)
-                        }
-                    }
-                }
-            }
-        } else {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                state.monsters.forEach { monster ->
-                    val isSelected = monster == selectedMonster
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(160.dp)
-                            .background(NeonPalette.Surface, RoundedCornerShape(10.dp))
-                            .border(
-                                width = if (isSelected) 3.dp else 1.dp,
-                                color = if (isSelected) NeonPalette.NeonPink else NeonPalette.NeonCyan.copy(alpha = 0.3f),
-                                shape = RoundedCornerShape(10.dp)
-                            )
-                            .clickable { onEvent(UiEvent.PickMonster(monster)) }
-                            .padding(10.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(monster.displayName, color = NeonPalette.TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            Spacer(Modifier.height(6.dp))
-                            Text(if (isSelected) "SÉLECTIONNÉ" else "DISPONIBLE", color = if (isSelected) NeonPalette.NeonPink else NeonPalette.NeonCyan, fontSize = 11.sp)
-                        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            state.monsters.forEach { monster ->
+                val isSelected = monster == selectedMonster
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(160.dp)
+                        .background(NeonPalette.Surface, RoundedCornerShape(10.dp))
+                        .border(
+                            width = if (isSelected) 3.dp else 1.dp,
+                            color = if (isSelected) NeonPalette.NeonPink else NeonPalette.NeonCyan.copy(alpha = 0.3f),
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                        .clickable { onEvent(UiEvent.PickMonster(monster)) }
+                        .padding(10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(monster.displayName, color = NeonPalette.TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Spacer(Modifier.height(6.dp))
+                        Text(if (isSelected) "SÉLECTIONNÉ" else "DISPONIBLE", color = if (isSelected) NeonPalette.NeonPink else NeonPalette.NeonCyan, fontSize = 11.sp)
                     }
                 }
             }
         }
+        
         
         Row(modifier = Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.End) {
             NeonButton("Lancer l'assaut (3 Bots)", onClick = { onEvent(UiEvent.StartGame) })
@@ -219,7 +149,6 @@ fun GameScreen(
     var tooltipMessage by remember { mutableStateOf<String?>(null) }
     var showSummary by remember { mutableStateOf(false) }
 
-    val isPortrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
     val me = state.me
     val opponents = state.opponents
     val occupant = state.tokyoOccupant
@@ -234,74 +163,70 @@ fun GameScreen(
         // Fuir ou Rester et le palier couvrent le plateau : TalkBack ne doit lire que la décision à prendre.
         val boardHidden = state.flee != null || state.malicePick != null
         Box(Modifier.fillMaxSize().then(if (boardHidden) Modifier.clearAndSetSemantics {} else Modifier)) {
-            if (isPortrait) {
-                GameScreenPortrait(state, onEvent, tooltipMessage, { tooltipMessage = it }, { showSummary = true })
-            } else {
-                Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
 
-                    Column(
-                        modifier = Modifier.weight(0.28f).fillMaxHeight(),
-                        verticalArrangement = Arrangement.SpaceBetween
+                Column(
+                    modifier = Modifier.weight(0.28f).fillMaxHeight(),
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        opponents.forEach { bot ->
+                            PlayerCardCompact(player = bot)
+                        }
+                    }
+                    PlayerCardSelf(player = me)
+                }
+
+                Column(
+                    modifier = Modifier.weight(0.42f).fillMaxHeight(),
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                    TurnStatusPanel(state, onEvent)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .background(NeonPalette.Surface, RoundedCornerShape(12.dp))
+                            .border(2.dp, NeonPalette.NeonCyan, RoundedCornerShape(12.dp))
+                            .padding(12.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            opponents.forEach { bot ->
-                                PlayerCardCompact(player = bot)
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("LA TOUR CENTRALE", color = NeonPalette.NeonCyan, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
+                            Spacer(Modifier.height(8.dp))
+                            if (occupant != null) {
+                                Text("👑 ${occupant.name}", color = NeonPalette.NeonPink, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                                Text("♥ ${occupant.hp}/10   ★ ${occupant.vp}/20", color = NeonPalette.TextPrimary, fontSize = 14.sp)
+                            } else {
+                                Text("ZONE LIBRE (+1 ★ à l'entrée)", color = NeonPalette.TextPrimary.copy(alpha = 0.7f), fontSize = 14.sp)
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            val botTurn = state.botTurn
+                            if (botTurn != null) {
+                                BotTurnOverlay(botTurn.botName, botTurn.lastAction, state.isBotFastForward,
+                                    { onEvent(UiEvent.ToggleFastBot) })
+                            } else {
+                            Text("Résumé · toucher pour le détail", color = NeonPalette.NeonCyan, fontSize = 11.sp,
+                                modifier = Modifier.heightIn(min = 48.dp).clickable { showSummary = true })
+                            Text(
+                                text = state.summary.takeLast(3).joinToString("\n"),
+                                color = NeonPalette.NeonCyan,
+                                fontSize = 12.sp,
+                                lineHeight = 15.sp,
+                                maxLines = 3
+                            )
                             }
                         }
-                        PlayerCardSelf(player = me)
                     }
+                    Spacer(Modifier.height(8.dp))
+                    SurchargeGaugeBar(malice = me.malice)
+                }
 
-                    Column(
-                        modifier = Modifier.weight(0.42f).fillMaxHeight(),
-                        verticalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        TurnStatusPanel(state, onEvent)
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f)
-                                .background(NeonPalette.Surface, RoundedCornerShape(12.dp))
-                                .border(2.dp, NeonPalette.NeonCyan, RoundedCornerShape(12.dp))
-                                .padding(12.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("LA TOUR CENTRALE", color = NeonPalette.NeonCyan, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
-                                Spacer(Modifier.height(8.dp))
-                                if (occupant != null) {
-                                    Text("👑 ${occupant.name}", color = NeonPalette.NeonPink, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                                    Text("♥ ${occupant.hp}/10   ★ ${occupant.vp}/20", color = NeonPalette.TextPrimary, fontSize = 14.sp)
-                                } else {
-                                    Text("ZONE LIBRE (+1 ★ à l'entrée)", color = NeonPalette.TextPrimary.copy(alpha = 0.7f), fontSize = 14.sp)
-                                }
-                                Spacer(Modifier.height(8.dp))
-                                val botTurn = state.botTurn
-                                if (botTurn != null) {
-                                    BotTurnOverlay(botTurn.botName, botTurn.lastAction, state.isBotFastForward,
-                                        { onEvent(UiEvent.ToggleFastBot) })
-                                } else {
-                                Text("Résumé · toucher pour le détail", color = NeonPalette.NeonCyan, fontSize = 11.sp,
-                                    modifier = Modifier.heightIn(min = 48.dp).clickable { showSummary = true })
-                                Text(
-                                    text = state.summary.takeLast(3).joinToString("\n"),
-                                    color = NeonPalette.NeonCyan,
-                                    fontSize = 12.sp,
-                                    lineHeight = 15.sp,
-                                    maxLines = 3
-                                )
-                                }
-                            }
-                        }
-                        Spacer(Modifier.height(8.dp))
-                        SurchargeGaugeBar(malice = me.malice)
-                    }
-
-                    Column(
-                        modifier = Modifier.weight(0.30f).fillMaxHeight(),
-                        verticalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        DiceTurnControls(state, onEvent) { tooltipMessage = it }
-                    }
+                Column(
+                    modifier = Modifier.weight(0.30f).fillMaxHeight(),
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                    DiceTurnControls(state, onEvent) { tooltipMessage = it }
                 }
             }
         }
@@ -498,6 +423,14 @@ fun BotTurnOverlay(
     }
 }
 
+/**
+ * Une décision en superposition doit être modale : sans récepteur de toucher, un appui hors des boutons
+ * traverse le voile et atteint le plateau dessous (Résumé, Pause…). Ici le voile capte le toucher et l'ignore.
+ */
+private fun Modifier.blockTouchesBehind(): Modifier = pointerInput(Unit) {
+    awaitPointerEventScope { while (true) awaitPointerEvent() }
+}
+
 @Composable
 fun FleeDialog(
     flee: FleeUi,
@@ -525,6 +458,7 @@ fun FleeDialog(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .blockTouchesBehind()
             .background(NeonPalette.Background.copy(alpha = 0.92f)),
         contentAlignment = Alignment.Center
     ) {
@@ -576,11 +510,11 @@ fun MalicePickerSheet(
     pick: MalicePickUi,
     onPickTile: (String) -> Unit
 ) {
-    val isPortrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
 
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .blockTouchesBehind()
             .background(NeonPalette.Background.copy(alpha = 0.94f))
             .padding(8.dp),
         contentAlignment = Alignment.Center
@@ -592,22 +526,15 @@ fun MalicePickerSheet(
                     MaliceTierChip(tier, isCurrent = tier == pick.level, Modifier.weight(1f))
                 }
             }
-            if (isPortrait) {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-                    pick.tiles.forEach { tile ->
-                        MaliceTileOffer(tile, onPickTile, Modifier.fillMaxWidth())
-                    }
-                }
-            } else {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)
-                ) {
-                    pick.tiles.forEach { tile ->
-                        MaliceTileOffer(tile, onPickTile, Modifier.weight(1f).fillMaxHeight())
-                    }
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)
+            ) {
+                pick.tiles.forEach { tile ->
+                    MaliceTileOffer(tile, onPickTile, Modifier.weight(1f).fillMaxHeight())
                 }
             }
+            
             Text(
                 text = if (pick.ownedTiles.isEmpty()) "Pouvoirs détenus : aucun" else "Pouvoirs détenus",
                 color = NeonPalette.NeonCyan,
@@ -672,31 +599,21 @@ fun GameOverScreen(
     onReplay: () -> Unit,
     onBackHome: () -> Unit
 ) {
-    val isPortrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
     val frame = Modifier
         .fillMaxSize()
         .background(NeonPalette.Background)
         .systemBarsPadding()
         .padding(16.dp)
 
-    if (isPortrait) {
-        Column(modifier = frame, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            GameOverHeadline(state, Modifier.fillMaxWidth())
+    Row(
+        modifier = frame,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        GameOverHeadline(state, Modifier.weight(0.4f))
+        Column(modifier = Modifier.weight(0.6f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             GameOverRanking(state, Modifier.fillMaxWidth())
-            Spacer(Modifier.weight(1f))
             GameOverActions(onReplay, onBackHome)
-        }
-    } else {
-        Row(
-            modifier = frame,
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            GameOverHeadline(state, Modifier.weight(0.4f))
-            Column(modifier = Modifier.weight(0.6f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                GameOverRanking(state, Modifier.fillMaxWidth())
-                GameOverActions(onReplay, onBackHome)
-            }
         }
     }
 }

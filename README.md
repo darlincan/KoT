@@ -2,10 +2,11 @@
 
 Jeu Android en Kotlin/Compose : un joueur humain affronte trois bots, avec un moteur de règles JVM indépendant d’Android. Les variantes du projet sont définies dans [specifications.md](specifications.md).
 
-Prérequis : JDK 21, SDK Android 35 installé et `sdk.dir` configuré dans le fichier local `local.properties`.
+Prérequis : SDK Android 35 installé, et `sdk.dir` dans `local.properties` (Android Studio le crée) ou la variable `ANDROID_HOME`. Le JDK 21 est téléchargé automatiquement par Gradle s'il n'est pas installé.
 
 ```bash
-./gradlew :core:engine:test :core:ai:test :app:assembleDebug :app:lintDebug
+./gradlew test :app:assembleDebug   # tous les tests JVM de tous les modules, puis l'APK
+./gradlew :app:lintDebug            # analyse Android
 ```
 
 APK de développement : `app/build/outputs/apk/debug/app-debug.apk`.
