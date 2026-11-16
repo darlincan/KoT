@@ -12,14 +12,19 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-data class SettingsUiState(val fastBots: Boolean = false, val fleeCountdown: Boolean = false)
+data class SettingsUiState(
+    val fastBots: Boolean = false,
+    val fleeCountdown: Boolean = false,
+    val musicEnabled: Boolean = true,
+    val sfxEnabled: Boolean = true,
+)
 
 /** ecran settings : lit et modifie les réglages persistés. */
 @HiltViewModel
 class SettingsViewModel @Inject constructor(private val settingsRepository: SettingsRepository) : ViewModel() {
 
     val uiState: StateFlow<SettingsUiState> = settingsRepository.settings
-        .map { SettingsUiState(fastBots = it.fastBots, fleeCountdown = it.fleeCountdown) }
+        .map { SettingsUiState(it.fastBots, it.fleeCountdown, it.musicEnabled, it.sfxEnabled) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
     fun toggleFastBots() {
@@ -33,6 +38,20 @@ class SettingsViewModel @Inject constructor(private val settingsRepository: Sett
         viewModelScope.launch {
             val current = settingsRepository.settings.first().fleeCountdown
             settingsRepository.setFleeCountdown(!current)
+        }
+    }
+
+    fun toggleMusic() {
+        viewModelScope.launch {
+            val current = settingsRepository.settings.first().musicEnabled
+            settingsRepository.setMusicEnabled(!current)
+        }
+    }
+
+    fun toggleSfx() {
+        viewModelScope.launch {
+            val current = settingsRepository.settings.first().sfxEnabled
+            settingsRepository.setSfxEnabled(!current)
         }
     }
 }

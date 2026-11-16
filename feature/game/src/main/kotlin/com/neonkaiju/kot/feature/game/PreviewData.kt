@@ -25,7 +25,7 @@ internal object PreviewData {
         opponents = bots,
         tokyoOccupant = human,
         activePlayerName = human.name,
-        phaseLabel = "Lancer les dés",
+        phase = PhaseUi.ROLL,
         isRolling = true,
         isBuyPhase = false,
         maliceTiers = listOf(3, 6, 10),
@@ -65,13 +65,13 @@ internal object PreviewData {
     )
 
     val flee = game.copy(
-        phaseLabel = "Fuir ou rester dans la Tour",
+        phase = PhaseUi.FLEE,
         isRolling = false,
         flee = FleeUi(attackerName = bots[0].name, damageTaken = 3, remainingHp = human.hp),
     )
 
     val malicePick = game.copy(
-        phaseLabel = "Choisir un pouvoir de Surcharge",
+        phase = PhaseUi.CHOOSE_POWER,
         malicePick = MalicePickUi(
             level = 6,
             tiles = listOf(
@@ -97,7 +97,7 @@ internal object PreviewData {
         sweepCost = 2,
         energyAfterSweep = 3,
         revision = 12,
-        lastReceipt = "Cœur nucléaire : 8 − 3 = 5 Cellules",
+        lastReceipt = ReceiptUi("Cœur nucléaire", energyBefore = 8, paid = 3, effectChange = 0, energyAfter = 5),
     )
 
     val gameOver = GameOverUiState(

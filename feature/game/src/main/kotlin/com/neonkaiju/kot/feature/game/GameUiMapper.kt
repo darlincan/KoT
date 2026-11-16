@@ -59,24 +59,22 @@ internal fun GameState.toMalicePickUi(): MalicePickUi? {
 private fun GameState.toBotTurnUi(explanation: String?): BotTurnUi? {
     val decision = decisionPlayer
     if (!decision.isBot || phase == TurnPhase.FIN_PARTIE) return null
-    val result = lastResolutionGains[activePlayer.id]
-    val text = if (phase == TurnPhase.ACHETER && result != null) {
-        "Résultat : +${result.vp} ★, +${result.energy} ⚡, +${result.healing} ♥, +${result.malice} Surcharge.\n${explanation.orEmpty()}"
-    } else {
-        explanation.orEmpty()
-    }
-    return BotTurnUi(decision.monster.displayName, text)
+    return BotTurnUi(
+        botName = decision.monster.displayName,
+        lastAction = explanation.orEmpty(),
+        result = lastResolutionGains[activePlayer.id]?.takeIf { phase == TurnPhase.ACHETER },
+    )
 }
 
-private fun GameState.phaseLabel(): String =
-    if (pendingMaliceLevels.isNotEmpty()) "Choisir un pouvoir de Surcharge" else when (phase) {
-        TurnPhase.LANCER -> "Lancer les dés"
-        TurnPhase.RESOUDRE -> "Résoudre les résultats"
-        TurnPhase.DECISION_FUITE -> "Fuir ou rester dans la Tour"
-        TurnPhase.ENTRER -> "Entrer dans la Tour"
-        TurnPhase.ACHETER -> "Acheter des cartes ou finir le tour"
-        TurnPhase.FIN_TOUR -> "Fin du tour"
-        TurnPhase.FIN_PARTIE -> "Partie terminée"
+private fun GameState.toPhaseUi(): PhaseUi =
+    if (pendingMaliceLevels.isNotEmpty()) PhaseUi.CHOOSE_POWER else when (phase) {
+        TurnPhase.LANCER -> PhaseUi.ROLL
+        TurnPhase.RESOUDRE -> PhaseUi.RESOLVE
+        TurnPhase.DECISION_FUITE -> PhaseUi.FLEE
+        TurnPhase.ENTRER -> PhaseUi.ENTER
+        TurnPhase.ACHETER -> PhaseUi.BUY
+        TurnPhase.FIN_TOUR -> PhaseUi.END_TURN
+        TurnPhase.FIN_PARTIE -> PhaseUi.GAME_OVER
     }
 
 internal fun GameState.toHomeUiState(version: String) = HomeUiState(
@@ -121,7 +119,7 @@ internal fun GameState.toGameUiState(
         opponents = players.filter { it.isBot }.map { it.toUi(this) },
         tokyoOccupant = players.firstOrNull { it.id == tokyoOccupantId }?.toUi(this),
         activePlayerName = activePlayer.monster.displayName,
-        phaseLabel = phaseLabel(),
+        phase = toPhaseUi(),
         isRolling = phase == TurnPhase.LANCER,
         isBuyPhase = phase == TurnPhase.ACHETER,
         maliceTiers = GameEngine.MALICE_TIERS,
@@ -170,13 +168,8 @@ internal fun GameState.toShopUiState(): ShopUiState {
         sweepCost = GameEngine.SWEEP_COST,
         energyAfterSweep = buyer.energy - GameEngine.SWEEP_COST,
         revision = actionHistory.size,
-        lastReceipt = lastMarketReceipts[buyer.id]?.let { receipt ->
-            val effect = when {
-                receipt.effectEnergyChange > 0 -> " + ${receipt.effectEnergyChange} (effet)"
-                receipt.effectEnergyChange < 0 -> " − ${-receipt.effectEnergyChange} (effet)"
-                else -> ""
-            }
-            "${receipt.itemName} : ${receipt.energyBefore} − ${receipt.paid}$effect = ${receipt.energyAfter} Cellules"
+        lastReceipt = lastMarketReceipts[buyer.id]?.let {
+            ReceiptUi(it.itemName, it.energyBefore, it.paid, it.effectEnergyChange, it.energyAfter)
         },
     )
 }

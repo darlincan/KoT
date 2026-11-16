@@ -21,12 +21,16 @@ data class Settings(
     val fastBots: Boolean = false,
     // Compte à rebours sur Fuir ou Rester : désactivé par défaut (règle transverse n° 6).
     val fleeCountdown: Boolean = false,
+    val musicEnabled: Boolean = true,
+    val sfxEnabled: Boolean = true,
 )
 
 interface SettingsRepository {
     val settings: Flow<Settings>
     suspend fun setFastBots(enabled: Boolean)
     suspend fun setFleeCountdown(enabled: Boolean)
+    suspend fun setMusicEnabled(enabled: Boolean)
+    suspend fun setSfxEnabled(enabled: Boolean)
 }
 
 /**
@@ -39,7 +43,14 @@ class DataStoreSettingsRepository(private val dataStore: DataStore<Preferences>)
 
     override val settings: Flow<Settings> = dataStore.data
         .catch { error -> if (error is IOException) emit(emptyPreferences()) else throw error }
-        .map { prefs -> Settings(fastBots = prefs[FAST_BOTS] ?: false, fleeCountdown = prefs[FLEE_COUNTDOWN] ?: false) }
+        .map { prefs -> 
+            Settings(
+                fastBots = prefs[FAST_BOTS] ?: false,
+                fleeCountdown = prefs[FLEE_COUNTDOWN] ?: false,
+                musicEnabled = prefs[MUSIC_ENABLED] ?: true,
+                sfxEnabled = prefs[SFX_ENABLED] ?: true,
+            )
+        }
 
     override suspend fun setFastBots(enabled: Boolean) {
         dataStore.edit { it[FAST_BOTS] = enabled }
@@ -49,9 +60,19 @@ class DataStoreSettingsRepository(private val dataStore: DataStore<Preferences>)
         dataStore.edit { it[FLEE_COUNTDOWN] = enabled }
     }
 
+    override suspend fun setMusicEnabled(enabled: Boolean) {
+        dataStore.edit { it[MUSIC_ENABLED] = enabled }
+    }
+
+    override suspend fun setSfxEnabled(enabled: Boolean) {
+        dataStore.edit { it[SFX_ENABLED] = enabled }
+    }
+
     companion object {
         private val FAST_BOTS = booleanPreferencesKey("fast_bots")
         private val FLEE_COUNTDOWN = booleanPreferencesKey("flee_countdown")
+        private val MUSIC_ENABLED = booleanPreferencesKey("music_enabled")
+        private val SFX_ENABLED = booleanPreferencesKey("sfx_enabled")
 
         // file doit se terminer par .preferences_pb
         fun create(
