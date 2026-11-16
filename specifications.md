@@ -8,7 +8,7 @@
 | **Forme du rendu** | dépôt GitHub, enseignant invité (`3ieDavidMenager`) ; fichier `AUTHORS` avec les noms des membres ; spécifications v0 (wireframes et premières spécifications) ; tableur de répartition des tâches |
 | **Suivi** | à la fin de chaque séance, un `git pull` suivi d'un build doit produire une application fonctionnelle montrant l'état du projet |
 | **Durée** | 7 semaines (28 septembre → 16 novembre 2026) |
-| **Support** | application Android, téléphone, **orientation paysage** |
+| **Support** | application Android, téléphone, **portrait et paysage** (suit la rotation) |
 | **Joueurs** | 4 — 1 humain, 3 bots |
 | **Base de règles** | livret *King of Tokyo – Dark Edition* fourni sur Moodle |
 | **Thème** | libre — retenu : **Néon Kaiju** (cyberpunk synthwave, voir §2) |
@@ -110,7 +110,7 @@ Les boutons pleins portent donc un libellé sombre. Cette règle est vérifiée 
 | Build | Gradle 9.6 (wrapper) + version catalog | dépendances centralisées dans `libs.versions.toml` |
 | UI | Jetpack Compose + Material 3 | une seule description d'écran, pas de XML |
 | Architecture | MVVM : `ViewModel` + `StateFlow<UiState>`, Navigation Compose (routes typées) | l'état survit à la rotation ; les écrans ne calculent aucune règle |
-| Orientation | paysage verrouillé | `android:screenOrientation="sensorLandscape"` dans le manifeste : toujours en paysage, dans les deux sens (gauchers, câble de charge) |
+| Orientation | adaptative | aucune orientation imposée dans le manifeste : l'appli démarre dans l'orientation de l'appareil (portrait en main) et suit la rotation. Chaque écran a une mise en page portrait et une paysage ; Fuir/Rester et le palier se superposent dans les deux |
 | Sérialisation | kotlinx.serialization | état de partie en JSON versionné (`GameState.CURRENT_VERSION`, migrations dans `FileGameRepository`) |
 | Injection | Hilt | permet d'injecter un générateur aléatoire fixe en test |
 | Persistance | DataStore (réglages) + fichier JSON (partie en cours) | pas de base de données nécessaire à ce périmètre |
@@ -502,7 +502,7 @@ Un test unitaire du catalogue échoue si : le catalogue ne compte pas exactement
 
 ## 9. Contrat des écrans
 
-Tous les écrans sont en **paysage**. Chaque écran est un composable sans état, alimenté par un `UiState` et remontant des `UiEvent`. Un écran ne calcule **jamais** une règle : si une information manque à son `UiState`, c'est le moteur qui doit la produire.
+Tous les écrans existent en **portrait et en paysage** (la disposition de référence des wireframes est le paysage). Chaque écran est un composable sans état, alimenté par un `UiState` et remontant des `UiEvent`. Un écran ne calcule **jamais** une règle : si une information manque à son `UiState`, c'est le moteur qui doit la produire.
 
 | Écran | Composable | `UiState` | `UiEvent` |
 | --- | --- | --- | --- |

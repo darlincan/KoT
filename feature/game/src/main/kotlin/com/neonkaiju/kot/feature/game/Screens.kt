@@ -1,5 +1,6 @@
 package com.neonkaiju.kot.feature.game
 
+import android.content.res.Configuration
 import android.view.accessibility.AccessibilityManager
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.tween
@@ -15,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -62,24 +64,36 @@ fun HomeScreen(
     state: HomeUiState,
     onEvent: (UiEvent) -> Unit
 ) {
+    val isPortrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
     val frame = Modifier
         .fillMaxSize()
         .background(NeonPalette.Background)
         .systemBarsPadding()
         .padding(24.dp)
 
-    Row(
-        modifier = frame,
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(24.dp)
-    ) {
-        HomeIllustration(Modifier.weight(1.2f).fillMaxHeight())
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            HomeTitle(state.version, Alignment.Start)
-            HomeActions(state.canResume, onEvent, Modifier.fillMaxWidth())
+    if (isPortrait) {
+        Column(
+            modifier = frame,
+            verticalArrangement = Arrangement.SpaceEvenly,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            HomeIllustration(Modifier.fillMaxWidth().weight(1f))
+            HomeTitle(state.version, Alignment.CenterHorizontally)
+            HomeActions(state.canResume, onEvent, Modifier.fillMaxWidth(0.8f))
+        }
+    } else {
+        Row(
+            modifier = frame,
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            HomeIllustration(Modifier.weight(1.2f).fillMaxHeight())
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                HomeTitle(state.version, Alignment.Start)
+                HomeActions(state.canResume, onEvent, Modifier.fillMaxWidth())
+            }
         }
     }
-    
 }
 
 @Composable
@@ -125,6 +139,7 @@ fun MonsterPickerScreen(
     state: MonsterPickerUiState,
     onEvent: (UiEvent) -> Unit
 ) {
+    val isPortrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
     val backLabel = stringResource(R.string.picker_back_a11y)
 
     Column(
@@ -144,15 +159,25 @@ fun MonsterPickerScreen(
             }
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth().weight(1f),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            state.monsters.forEach { monster ->
-                MonsterCard(monster, monster == state.selected, onEvent, Modifier.weight(1f).fillMaxHeight())
+        if (isPortrait) {
+            Column(
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                state.monsters.forEach { monster ->
+                    MonsterCard(monster, monster == state.selected, onEvent, Modifier.fillMaxWidth().weight(1f))
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                state.monsters.forEach { monster ->
+                    MonsterCard(monster, monster == state.selected, onEvent, Modifier.weight(1f).fillMaxHeight())
+                }
             }
         }
-        
     
 
         Row(
@@ -223,6 +248,7 @@ fun GameScreen(
 ) {
     var tooltipMessage by remember { mutableStateOf<String?>(null) }
     var showSummary by remember { mutableStateOf(false) }
+    val isPortrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
     val me = state.me
     val opponents = state.opponents
     val glitch = damageFlash(me.hp)
@@ -238,37 +264,40 @@ fun GameScreen(
         // Fuir ou Rester et le palier couvrent le plateau : TalkBack ne doit lire que la décision à prendre.
         val boardHidden = state.flee != null || state.malicePick != null
         Box(Modifier.fillMaxSize().then(if (boardHidden) Modifier.clearAndSetSemantics {} else Modifier)) {
-            Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (isPortrait) {
+                GameScreenPortrait(state, onEvent, tooltipMessage, { tooltipMessage = it }, { showSummary = true })
+            } else {
+                Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
 
-                Column(
-                    modifier = Modifier.weight(0.28f).fillMaxHeight(),
-                    verticalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        TurnStatusPanel(state, onEvent)
-                        opponents.forEach { bot ->
-                            PlayerCardCompact(player = bot)
+                    Column(
+                        modifier = Modifier.weight(0.28f).fillMaxHeight(),
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            TurnStatusPanel(state, onEvent)
+                            opponents.forEach { bot ->
+                                PlayerCardCompact(player = bot)
+                            }
                         }
+                        PlayerCardSelf(player = me)
                     }
-                    PlayerCardSelf(player = me)
-                }
 
-                Row(
-                    modifier = Modifier.weight(0.42f).fillMaxHeight(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    TowerPanel(state, onEvent, { showSummary = true }, Modifier.weight(1f).fillMaxHeight())
-                    SurchargeGaugeBar(malice = me.malice, tiers = state.maliceTiers, modifier = Modifier.fillMaxHeight())
-                }
+                    Row(
+                        modifier = Modifier.weight(0.42f).fillMaxHeight(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        TowerPanel(state, onEvent, { showSummary = true }, Modifier.weight(1f).fillMaxHeight())
+                        SurchargeGaugeBar(malice = me.malice, tiers = state.maliceTiers, modifier = Modifier.fillMaxHeight())
+                    }
 
-                Column(
-                    modifier = Modifier.weight(0.30f).fillMaxHeight(),
-                    verticalArrangement = Arrangement.SpaceBetween
-                ) {
-                    DiceTurnControls(state, onEvent) { tooltipMessage = it }
+                    Column(
+                        modifier = Modifier.weight(0.30f).fillMaxHeight(),
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        DiceTurnControls(state, onEvent) { tooltipMessage = it }
+                    }
                 }
             }
-            
         
         }
 
@@ -610,6 +639,7 @@ fun MalicePickerSheet(
     pick: MalicePickUi,
     onPickTile: (String) -> Unit
 ) {
+    val isPortrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
 
     Box(
         modifier = Modifier
@@ -626,15 +656,22 @@ fun MalicePickerSheet(
                     MaliceTierChip(tier, isCurrent = tier == pick.level, Modifier.weight(1f))
                 }
             }
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)
-            ) {
-                pick.tiles.forEach { tile ->
-                    MaliceTileOffer(tile, onPickTile, Modifier.weight(1f).fillMaxHeight())
+            if (isPortrait) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                    pick.tiles.forEach { tile ->
+                        MaliceTileOffer(tile, onPickTile, Modifier.fillMaxWidth())
+                    }
+                }
+            } else {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)
+                ) {
+                    pick.tiles.forEach { tile ->
+                        MaliceTileOffer(tile, onPickTile, Modifier.weight(1f).fillMaxHeight())
+                    }
                 }
             }
-            
         
             Text(
                 text = stringResource(if (pick.ownedTiles.isEmpty()) R.string.malice_owned_none else R.string.malice_owned),
@@ -701,24 +738,33 @@ fun GameOverScreen(
     onReplay: () -> Unit,
     onBackHome: () -> Unit
 ) {
+    val isPortrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
     val frame = Modifier
         .fillMaxSize()
         .background(NeonPalette.Background)
         .systemBarsPadding()
         .padding(16.dp)
 
-    Row(
-        modifier = frame,
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        GameOverHeadline(state, Modifier.weight(0.4f))
-        Column(modifier = Modifier.weight(0.6f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    if (isPortrait) {
+        Column(modifier = frame, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            GameOverHeadline(state, Modifier.fillMaxWidth())
             GameOverRanking(state, Modifier.fillMaxWidth())
+            Spacer(Modifier.weight(1f))
             GameOverActions(onReplay, onBackHome)
         }
+    } else {
+        Row(
+            modifier = frame,
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            GameOverHeadline(state, Modifier.weight(0.4f))
+            Column(modifier = Modifier.weight(0.6f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                GameOverRanking(state, Modifier.fillMaxWidth())
+                GameOverActions(onReplay, onBackHome)
+            }
+        }
     }
-    
 }
 
 @Composable
