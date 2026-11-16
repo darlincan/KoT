@@ -51,6 +51,7 @@ class GameViewModel @Inject constructor(
     private val botPolicy: BotPolicy,
     private val seedProvider: SeedProvider,
     @Named(APP_VERSION) private val appVersion: String,
+    private val soundPlayer: SoundPlayer,
 ) : ViewModel() {
 
     private val _game = MutableStateFlow<GameState?>(null)
@@ -70,6 +71,10 @@ class GameViewModel @Inject constructor(
     private val fleeCountdown: StateFlow<Boolean> = settingsRepository.settings
         .map { it.fleeCountdown }
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    private val sfxEnabled: StateFlow<Boolean> = settingsRepository.settings
+        .map { it.sfxEnabled }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
     private val botsActive = MutableStateFlow(false)
 
@@ -115,6 +120,9 @@ class GameViewModel @Inject constructor(
             _isLoaded.value = true
         }
         viewModelScope.launch { playBots() }
+        viewModelScope.launch {
+            settingsRepository.settings.map { it.musicEnabled }.collect { soundPlayer.setMusicEnabled(it) }
+        }
     }
 
     fun pickMonster(monster: MonsterId) {
@@ -168,7 +176,16 @@ class GameViewModel @Inject constructor(
         } catch (e: IllegalActionException) {
             return
         }
+        playSounds(state, action, next)
         update(next)
+    }
+
+    private fun playSounds(before: GameState, action: GameAction, after: GameState) {
+        if (!sfxEnabled.value) return
+        if (action == GameAction.Reroll) soundPlayer.play(SoundEffect.DICE)
+        if (action is GameAction.BuyCard) soundPlayer.play(SoundEffect.PURCHASE)
+        val damaged = before.players.any { player -> after.players.first { it.id == player.id }.hp < player.hp }
+        if (damaged) soundPlayer.play(SoundEffect.DAMAGE)
     }
 
     private fun update(state: GameState) {

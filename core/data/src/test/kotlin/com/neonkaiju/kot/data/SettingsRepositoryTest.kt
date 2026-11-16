@@ -33,6 +33,23 @@ class SettingsRepositoryTest {
     }
 
     @Test
+    fun `music and effects are on by default and stored separately`() = runTest {
+        val scope = TestScope(UnconfinedTestDispatcher(testScheduler))
+        val repository = DataStoreSettingsRepository.create(File(dir, "sound.preferences_pb"), scope)
+
+        assertTrue(repository.settings.first().musicEnabled)
+        assertTrue(repository.settings.first().sfxEnabled)
+
+        repository.setMusicEnabled(false)
+        assertFalse(repository.settings.first().musicEnabled)
+        assertTrue(repository.settings.first().sfxEnabled, "couper la musique ne coupe pas les effets")
+
+        repository.setSfxEnabled(false)
+        assertFalse(repository.settings.first().sfxEnabled)
+        scope.cancel()
+    }
+
+    @Test
     fun `flee countdown is off by default, then stored`() = runTest {
         val scope = TestScope(UnconfinedTestDispatcher(testScheduler))
         val repository = DataStoreSettingsRepository.create(File(dir, "countdown.preferences_pb"), scope)

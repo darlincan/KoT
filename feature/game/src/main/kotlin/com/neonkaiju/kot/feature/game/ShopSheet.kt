@@ -8,6 +8,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -15,6 +16,22 @@ import androidx.compose.ui.unit.sp
 import com.neonkaiju.kot.model.*
 
 private data class MarketConfirmation(val action: GameAction, val revision: Int)
+
+@Composable
+private fun ReceiptUi.text(): String = when {
+    effectChange > 0 -> stringResource(R.string.shop_receipt_gain, itemName, energyBefore, paid, energyAfter, effectChange)
+    effectChange < 0 -> stringResource(R.string.shop_receipt_loss, itemName, energyBefore, paid, energyAfter, -effectChange)
+    else -> stringResource(R.string.shop_receipt, itemName, energyBefore, paid, energyAfter)
+}
+
+@Composable
+private fun ShopCardUi.accessibilityLabel(): String = stringResource(
+    R.string.shop_card_a11y,
+    name,
+    stringResource(if (type == CardType.ACTION) R.string.shop_kind_action else R.string.shop_kind_power),
+    frenchPlural(R.plurals.a11y_cells, cost, cost),
+    text,
+)
 
 @Composable
 fun ShopSheet(state: ShopUiState, onBuy: (String, Int) -> Unit, onSweep: (Int) -> Unit, onClose: () -> Unit) {
@@ -25,45 +42,50 @@ fun ShopSheet(state: ShopUiState, onBuy: (String, Int) -> Unit, onSweep: (Int) -
 
     Column(Modifier.fillMaxSize().background(NeonPalette.Background).systemBarsPadding().padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("MARCHÉ NOIR — ${state.energy} ${if (state.energy > 1) "CELLULES DISPONIBLES" else "CELLULE DISPONIBLE"} ⚡", color = NeonPalette.NeonCyan, fontFamily = OrbitronFamily,
+        Text(frenchPlural(R.plurals.shop_title, state.energy, state.energy), color = NeonPalette.NeonCyan, fontFamily = OrbitronFamily,
             fontSize = 16.sp, lineHeight = 19.sp)
-        state.lastReceipt?.let { Text(it, color = NeonPalette.NeonPink, fontSize = 13.sp, lineHeight = 16.sp) }
+        state.lastReceipt?.let { Text(it.text(), color = NeonPalette.NeonPink, fontSize = 13.sp, lineHeight = 16.sp) }
         tooltip?.let { Text(it, color = NeonPalette.NeonPink, fontSize = 12.sp, lineHeight = 14.sp) }
         Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             state.cards.forEach { card ->
                 val selectedCard = card.id == selectedId
+                val a11y = card.accessibilityLabel()
                 Column(Modifier.weight(1f).fillMaxHeight()
-                    .semantics { contentDescription = card.accessibilityLabel }
+                    .semantics { contentDescription = a11y }
                     .background(NeonPalette.Surface, RoundedCornerShape(10.dp))
                     .border(if (selectedCard) 3.dp else 1.dp, if (selectedCard) NeonPalette.NeonPink else NeonPalette.NeonCyan, RoundedCornerShape(10.dp))
                     .padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(card.name, color = NeonPalette.NeonPink, fontSize = 14.sp, lineHeight = 17.sp)
-                    Text(if (card.type == CardType.ACTION) "ACTION · effet immédiat, puis défaussée" else "POUVOIR · carte conservée",
+                    Text(stringResource(if (card.type == CardType.ACTION) R.string.shop_type_action else R.string.shop_type_power),
                         color = NeonPalette.TextPrimary, fontSize = 11.sp, lineHeight = 13.sp)
-                    Text("Prix : ${card.cost} ⚡${if (card.cost != card.baseCost) " (base ${card.baseCost})" else ""}",
+                    Text(if (card.cost != card.baseCost) stringResource(R.string.shop_price_discount, card.cost, card.baseCost) else stringResource(R.string.shop_price, card.cost),
                         color = NeonPalette.NeonCyan, fontSize = 13.sp, lineHeight = 16.sp)
                     Text(card.text, color = NeonPalette.TextPrimary, fontSize = 12.sp, lineHeight = 15.sp,
                         modifier = Modifier.weight(1f))
-                    NeonButton(if (selectedCard) "Sélectionnée" else "Sélectionner", enabled = !state.isBotTurn,
+                    NeonButton(stringResource(if (selectedCard) R.string.shop_selected else R.string.shop_select), enabled = !state.isBotTurn,
+                        disabledReason = BlockedReason.BOT_PLAYING.label(), onDisabledLongPress = { tooltip = it },
                         modifier = Modifier.fillMaxWidth(), onClick = { selectedId = card.id; tooltip = null })
                 }
             }
         }
-        Text(selected?.let { if (it.energyAfterPurchase >= 0) "${it.name} · prix ${it.cost} ⚡ · après paiement : ${it.energyAfterPurchase} ⚡ (avant effet)"
-            else "${it.name} · il manque ${-it.energyAfterPurchase} Cellule(s) pour acheter cette carte" }
-            ?: "Sélectionnez une carte, puis confirmez l’achat. Sélectionner ne dépense rien.",
+        Text(
+            when {
+                selected == null -> stringResource(R.string.shop_hint)
+                selected.energyAfterPurchase >= 0 -> stringResource(R.string.shop_after_payment, selected.name, selected.cost, selected.energyAfterPurchase)
+                else -> frenchPlural(R.plurals.shop_missing, -selected.energyAfterPurchase, -selected.energyAfterPurchase, selected.name)
+            },
             color = NeonPalette.TextPrimary, fontSize = 11.sp, lineHeight = 14.sp)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            NeonButton("Renouveler (${state.sweepCost} ⚡)", enabled = state.canSweep, modifier = Modifier.weight(1f),
-                disabledReason = "Il faut ${state.sweepCost} Cellules et des cartes de remplacement disponibles", onDisabledLongPress = { tooltip = it },
+            NeonButton(stringResource(R.string.shop_sweep, state.sweepCost), enabled = state.canSweep, modifier = Modifier.weight(1f),
+                disabledReason = stringResource(R.string.shop_sweep_blocked, state.sweepCost), onDisabledLongPress = { tooltip = it },
                 onClick = { confirmation = MarketConfirmation(GameAction.SweepShop, state.revision) })
-            NeonButton("Acheter la sélection", enabled = selected?.canBuy == true,
+            NeonButton(stringResource(R.string.shop_buy), enabled = selected?.canBuy == true,
                 modifier = Modifier.weight(1f),
-                disabledReason = selected?.let { "Il vous faut ${it.cost} ⚡ pour acheter ${it.name}" } ?: "Sélectionnez une carte d’abord",
+                disabledReason = selected?.let { stringResource(R.string.shop_buy_blocked, it.cost, it.name) } ?: stringResource(R.string.shop_buy_no_selection),
                 onDisabledLongPress = { tooltip = it }, onClick = {
                     selected?.let { confirmation = MarketConfirmation(GameAction.BuyCard(it.id), state.revision) }
                 })
-            NeonButton("Fermer le marché", modifier = Modifier.weight(1f), onClick = onClose)
+            NeonButton(stringResource(R.string.shop_close), modifier = Modifier.weight(1f), onClick = onClose)
         }
     }
     confirmation?.let { pending ->
@@ -72,17 +94,17 @@ fun ShopSheet(state: ShopUiState, onBuy: (String, Int) -> Unit, onSweep: (Int) -
         val available = if (buy == null) state.canSweep else card?.canBuy == true
         val valid = pending.revision == state.revision && available
         AlertDialog(onDismissRequest = { confirmation = null },
-            title = { Text(if (buy == null) "Renouveler le marché ?" else "Confirmer l’achat de ${card?.name.orEmpty()}") },
+            title = { Text(if (buy == null) stringResource(R.string.shop_confirm_sweep_title) else stringResource(R.string.shop_confirm_buy_title, card?.name.orEmpty())) },
             text = { Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 if (card != null) {
-                    Text("Paiement : ${state.energy} − ${card.cost} = ${card.energyAfterPurchase} Cellules, avant application de l’effet.")
+                    Text(stringResource(R.string.shop_confirm_payment, state.energy, card.cost, card.energyAfterPurchase))
                     Text(card.text)
-                    Text(if (card.type == CardType.ACTION) "L’effet s’applique immédiatement ; la carte est défaussée."
-                        else "Le pouvoir reste dans vos cartes. Ses effets se déclenchent aux moments indiqués.")
-                } else Text("Dépenser ${state.sweepCost} Cellules pour remplacer les trois cartes visibles. Resteraient ${state.energyAfterSweep} Cellules.")
-                if (!valid) Text("Cette opération n’est plus disponible. Annulez et vérifiez votre stock et le marché.")
+                    Text(stringResource(if (card.type == CardType.ACTION) R.string.shop_confirm_action else R.string.shop_confirm_power))
+                } else Text(stringResource(R.string.shop_confirm_sweep, state.sweepCost, state.energyAfterSweep))
+                if (!valid) Text(stringResource(R.string.shop_confirm_stale))
             } },
-            confirmButton = { NeonButton("Confirmer le paiement", enabled = valid, onClick = {
+            confirmButton = { NeonButton(stringResource(R.string.shop_confirm_button), enabled = valid,
+                disabledReason = stringResource(R.string.shop_confirm_stale), onClick = {
                 // Consume the confirmation before dispatching; repeated callbacks cannot pay twice.
                 if (confirmation == pending) {
                     confirmation = null
@@ -90,6 +112,6 @@ fun ShopSheet(state: ShopUiState, onBuy: (String, Int) -> Unit, onSweep: (Int) -
                     if (buy != null) onBuy(buy.cardId, pending.revision) else onSweep(pending.revision)
                 }
             }) },
-            dismissButton = { NeonButton("Annuler", onClick = { confirmation = null }, accentColor = NeonPalette.NeonCyan) })
+            dismissButton = { NeonButton(stringResource(R.string.action_cancel), onClick = { confirmation = null }, accentColor = NeonPalette.NeonCyan) })
     }
 }

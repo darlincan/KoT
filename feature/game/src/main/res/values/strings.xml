@@ -1,0 +1,304 @@
+<resources>
+    <!-- Vocabulaire Néon Kaiju (§2.1) -->
+    <string name="zone_tokyo_city">La Tour centrale</string>
+    <string name="resource_energy">Cellules</string>
+    <string name="gauge_malice">Surcharge</string>
+    <string name="shop_name">Marché noir</string>
+    <string name="malice_tiles_name">Pouvoirs de Surcharge</string>
+
+    <!-- Commun -->
+    <string name="action_back">Retour</string>
+    <string name="action_close">Fermer</string>
+    <string name="action_cancel">Annuler</string>
+    <string name="symbol_menu" translatable="false">≡</string>
+    <string name="symbol_back" translatable="false">‹</string>
+
+    <!-- 01 Accueil -->
+    <string name="home_kicker">LA GUERRE DES</string>
+    <string name="home_title">NÉON KAIJU</string>
+    <string name="home_version">Version %1$s • Édition Sombre</string>
+    <string name="home_play">Jouer</string>
+    <string name="home_opponents">Vous contre 3 monstres IA</string>
+    <string name="home_resume">Reprendre</string>
+    <string name="home_resume_blocked">Aucune partie sauvegardée en cours</string>
+    <string name="home_rules">Règles</string>
+    <string name="home_monsters">Monstres</string>
+    <string name="home_settings">Réglages</string>
+
+    <!-- 02 Choix du monstre -->
+    <string name="picker_back_a11y">Retour à l\'accueil</string>
+    <string name="picker_title">CHOISIS TON KAIJU</string>
+    <string name="picker_subtitle">Vous + 3 IA</string>
+    <string name="picker_opponents">Vos adversaires (IA)</string>
+    <string name="picker_opponent_chip">IA %1$d</string>
+    <string name="picker_bots_note">3 bots tirés au sort parmi les 5 autres</string>
+    <string name="picker_start">Entrer dans la ville</string>
+    <string name="picker_selected">SÉLECTIONNÉ</string>
+    <string name="picker_available">DISPONIBLE</string>
+    <string name="picker_selected_a11y">sélectionné</string>
+    <string name="picker_available_a11y">disponible</string>
+    <string name="picker_monster_a11y">%1$s, %2$s, %3$s</string>
+
+    <!-- 03 Jeu -->
+    <string name="tower_title">LA TOUR CENTRALE</string>
+    <string name="tower_occupant">👑 %1$s</string>
+    <string name="tower_stats">♥ %1$d/10   ★ %2$d/20</string>
+    <string name="tower_bonus">+2 ★ au début de son tour</string>
+    <string name="tower_free">ZONE LIBRE (+1 ★ à l\'entrée)</string>
+    <string name="summary_hint">Résumé · toucher pour le détail</string>
+    <string name="summary_title">Résumé du tour — %1$s</string>
+    <string name="turn_mine">À TON TOUR</string>
+    <string name="turn_bot">Tour de %1$s — le bot joue</string>
+    <string name="action_pause">Pause</string>
+
+    <string name="phase_roll">Lancer les dés</string>
+    <string name="phase_resolve">Résoudre les résultats</string>
+    <string name="phase_flee">Fuir ou rester dans la Tour</string>
+    <string name="phase_enter">Entrer dans la Tour</string>
+    <string name="phase_buy">Acheter des cartes ou finir le tour</string>
+    <string name="phase_end_turn">Fin du tour</string>
+    <string name="phase_over">Partie terminée</string>
+    <string name="phase_choose_power">Choisir un pouvoir de Surcharge</string>
+
+    <string name="player_name_eliminated">☠ %1$s</string>
+    <string name="player_name_tower">👑 %1$s</string>
+    <string name="player_stats">IA · ♥%1$d ★%2$d ⚡%3$d S%4$d</string>
+    <string name="player_gains">Gains : +%1$d ★  +%2$d ⚡  +%3$d ♥</string>
+    <string name="player_self_name">%1$s (VOUS)</string>
+    <plurals name="player_self_stats">
+        <item quantity="one">♥ %2$d/10   ★ %3$d/20   ⚡ %4$d · %1$d carte</item>
+        <item quantity="many">♥ %2$d/10   ★ %3$d/20   ⚡ %4$d · %1$d cartes</item>
+        <item quantity="other">♥ %2$d/10   ★ %3$d/20   ⚡ %4$d · %1$d cartes</item>
+    </plurals>
+    <string name="gains_start_of_turn">BONUS DE DÉBUT DE TOUR AJOUTÉS</string>
+    <string name="gains_complete">GAINS DE LA DERNIÈRE RÉSOLUTION AJOUTÉS</string>
+    <string name="gains_in_progress">GAINS DÉJÀ AJOUTÉS — RÉSOLUTION EN COURS</string>
+    <string name="gains_detail">+%1$d ★ (dés +%2$d, Tour +%3$d)\n+%4$d Cellules · +%5$d ♥ · +%6$d Surcharge</string>
+    <string name="gains_detail_effects">+%1$d ★ (dés +%2$d, Tour +%3$d, effets +%7$d)\n+%4$d Cellules · +%5$d ♥ · +%6$d Surcharge</string>
+    <string name="gains_pending">Les gains seront ajoutés à la résolution.</string>
+
+    <string name="player_a11y_self">Vous : %1$s</string>
+    <string name="player_a11y_eliminated">éliminé</string>
+    <string name="player_a11y_tower">dans la Tour</string>
+    <string name="player_a11y_surcharge">Surcharge %1$d</string>
+    <plurals name="a11y_hearts">
+        <item quantity="one">%1$d point de vie</item>
+        <item quantity="many">%1$d points de vie</item>
+        <item quantity="other">%1$d points de vie</item>
+    </plurals>
+    <plurals name="a11y_stars">
+        <item quantity="one">%1$d étoile</item>
+        <item quantity="many">%1$d étoiles</item>
+        <item quantity="other">%1$d étoiles</item>
+    </plurals>
+    <plurals name="a11y_cells">
+        <item quantity="one">%1$d Cellule</item>
+        <item quantity="many">%1$d Cellules</item>
+        <item quantity="other">%1$d Cellules</item>
+    </plurals>
+
+    <string name="gauge_value">%1$d/%2$d</string>
+    <string name="gauge_a11y">Surcharge %1$d sur %2$d. Paliers %3$s : choisir un pouvoir</string>
+
+    <!-- Dés et commandes -->
+    <string name="roll_counter">Lancer %1$d/%2$d — %3$s</string>
+    <string name="rolls_none">aucun lancer restant</string>
+    <plurals name="rolls_left">
+        <item quantity="one">%1$d lancer restant</item>
+        <item quantity="many">%1$d lancers restants</item>
+        <item quantity="other">%1$d lancers restants</item>
+    </plurals>
+    <string name="dice_hint_first">Premier lancer automatique. Touchez un dé pour le verrouiller.</string>
+    <string name="dice_hint">Touchez un dé pour le verrouiller.</string>
+    <string name="order_line">Ordre : %1$s · Modifier</string>
+    <string name="order_separator">" → "</string>
+    <string name="action_reroll">Relancer</string>
+    <string name="action_stop_rolling">Résoudre</string>
+    <string name="dice_resolved">Dés résolus. Achetez des cartes ou terminez le tour.</string>
+    <string name="decision_pending">Décision en cours…</string>
+    <string name="action_end_turn">Fin du tour</string>
+    <string name="order_title">Ordre de résolution automatique</string>
+    <string name="order_hint">Choisissez les quatre catégories dans l’ordre souhaité.</string>
+    <string name="order_confirm">Confirmer</string>
+    <string name="order_confirm_blocked">Choisissez d’abord les quatre catégories</string>
+    <string name="order_restart">Recommencer</string>
+    <string name="symbol_numbers">Chiffres</string>
+    <string name="symbol_energy">Cellules</string>
+    <string name="symbol_hearts">Soins</string>
+    <string name="symbol_claws">Griffes</string>
+
+    <string name="die_kept">🔒 Gardé</string>
+    <string name="die_free">À relancer</string>
+    <string name="die_label">%1$s\n%2$s</string>
+    <string name="die_a11y">Dé %1$d : %2$s, %3$s</string>
+    <string name="die_a11y_locked">verrouillé</string>
+    <string name="die_a11y_free">libre</string>
+    <string name="face_one">chiffre 1</string>
+    <string name="face_two">chiffre 2</string>
+    <string name="face_three">chiffre 3</string>
+    <string name="face_energy">éclair</string>
+    <string name="face_claw">griffe</string>
+    <string name="face_heart">cœur</string>
+
+    <!-- Raisons des commandes grisées -->
+    <string name="blocked_no_rolls">Plus de lancers disponibles</string>
+    <string name="blocked_all_kept">Déverrouillez au moins un dé pour relancer</string>
+    <string name="blocked_rolling_over">Vos lancers sont terminés pour ce tour</string>
+    <string name="blocked_not_buy_phase">Le Marché noir n\'est accessible qu\'en phase d\'achat</string>
+    <string name="blocked_resolve_first">Terminez d\'abord la résolution de vos dés</string>
+    <string name="blocked_bot_playing">Le bot joue</string>
+
+    <!-- Tour d'un bot -->
+    <string name="bot_overlay">TOUR BOT : %1$s • %2$s</string>
+    <string name="bot_result">Résultat : +%1$d ★, +%2$d ⚡, +%3$d ♥, +%4$d Surcharge.\n%5$s</string>
+    <string name="bot_fast_on">Vitesse x2</string>
+    <string name="bot_fast_off">Accélérer</string>
+
+    <!-- 04 Marché noir -->
+    <plurals name="shop_title">
+        <item quantity="one">MARCHÉ NOIR — %1$d CELLULE DISPONIBLE ⚡</item>
+        <item quantity="many">MARCHÉ NOIR — %1$d CELLULES DISPONIBLES ⚡</item>
+        <item quantity="other">MARCHÉ NOIR — %1$d CELLULES DISPONIBLES ⚡</item>
+    </plurals>
+    <string name="shop_receipt">%1$s : %2$d − %3$d = %4$d Cellules</string>
+    <string name="shop_receipt_gain">%1$s : %2$d − %3$d + %5$d (effet) = %4$d Cellules</string>
+    <string name="shop_receipt_loss">%1$s : %2$d − %3$d − %5$d (effet) = %4$d Cellules</string>
+    <string name="shop_type_action">ACTION · effet immédiat, puis défaussée</string>
+    <string name="shop_type_power">POUVOIR · carte conservée</string>
+    <string name="shop_price">Prix : %1$d ⚡</string>
+    <string name="shop_price_discount">Prix : %1$d ⚡ (base %2$d)</string>
+    <string name="shop_selected">Sélectionnée</string>
+    <string name="shop_select">Sélectionner</string>
+    <string name="shop_after_payment">%1$s · prix %2$d ⚡ · après paiement : %3$d ⚡ (avant effet)</string>
+    <plurals name="shop_missing">
+        <item quantity="one">%2$s · il manque %1$d Cellule pour acheter cette carte</item>
+        <item quantity="many">%2$s · il manque %1$d Cellules pour acheter cette carte</item>
+        <item quantity="other">%2$s · il manque %1$d Cellules pour acheter cette carte</item>
+    </plurals>
+    <string name="shop_hint">Sélectionnez une carte, puis confirmez l’achat. Sélectionner ne dépense rien.</string>
+    <string name="shop_sweep">Renouveler (%1$d ⚡)</string>
+    <string name="shop_sweep_blocked">Il vous faut %1$d ⚡ et des cartes de remplacement pour renouveler</string>
+    <string name="shop_buy">Acheter la sélection</string>
+    <string name="shop_buy_blocked">Il vous faut %1$d ⚡ pour acheter %2$s</string>
+    <string name="shop_buy_no_selection">Sélectionnez une carte d’abord</string>
+    <string name="shop_close">Fermer le marché</string>
+    <string name="shop_confirm_sweep_title">Renouveler le marché ?</string>
+    <string name="shop_confirm_buy_title">Confirmer l’achat de %1$s</string>
+    <string name="shop_confirm_payment">Paiement : %1$d − %2$d = %3$d Cellules, avant application de l’effet.</string>
+    <string name="shop_confirm_action">L’effet s’applique immédiatement ; la carte est défaussée.</string>
+    <string name="shop_confirm_power">Le pouvoir reste dans vos cartes. Ses effets se déclenchent aux moments indiqués.</string>
+    <string name="shop_confirm_sweep">Dépenser %1$d Cellules pour remplacer les trois cartes visibles. Resteraient %2$d Cellules.</string>
+    <string name="shop_confirm_stale">Cette opération n’est plus disponible. Annulez et vérifiez votre stock et le marché.</string>
+    <string name="shop_confirm_button">Confirmer le paiement</string>
+    <string name="shop_card_a11y">%1$s, %2$s, prix %3$s, %4$s</string>
+    <string name="shop_kind_action">action</string>
+    <string name="shop_kind_power">pouvoir</string>
+
+    <!-- 05 Fuir ou Rester -->
+    <string name="flee_title">ALERTE BRÈCHE DANS LA TOUR</string>
+    <plurals name="flee_damage">
+        <item quantity="one">%2$s vous a infligé %1$d dégât.</item>
+        <item quantity="many">%2$s vous a infligé %1$d dégâts.</item>
+        <item quantity="other">%2$s vous a infligé %1$d dégâts.</item>
+    </plurals>
+    <string name="flee_remaining">Il vous reste %1$d ♥</string>
+    <string name="flee_option_flee">FUIR</string>
+    <string name="flee_option_stay">RESTER</string>
+    <string name="flee_consequence">%1$s prend la Tour. Vous pourrez de nouveau vous soigner avec les dés.</string>
+    <string name="stay_consequence">+2 ★ au début de votre prochain tour si vous survivez, mais aucun soin par les dés.</string>
+    <string name="action_flee">Fuir la Tour</string>
+    <string name="action_stay">Rester</string>
+    <string name="flee_countdown">Sans réponse dans %1$d s, vous restez</string>
+
+    <!-- 06 Palier de Surcharge -->
+    <string name="malice_title">Palier %1$d : choisir un pouvoir</string>
+    <string name="malice_owned_none">Pouvoirs détenus : aucun</string>
+    <string name="malice_owned">Pouvoirs détenus</string>
+    <string name="malice_owned_item">%1$s · %2$s</string>
+    <string name="malice_tier">Palier %1$d</string>
+    <string name="malice_tier_hint">Choisir un pouvoir</string>
+    <string name="malice_tile_a11y">Pouvoir %1$s : %2$s</string>
+    <string name="action_equip">Équiper</string>
+
+    <!-- 07 Fin de partie -->
+    <string name="end_twenty_stars">VICTOIRE PAR 20 ★</string>
+    <string name="end_last_survivor">DERNIER SURVIVANT</string>
+    <string name="end_all_eliminated">TOUS ÉLIMINÉS</string>
+    <string name="end_winner">%1$s règne sur la mégapole</string>
+    <string name="end_no_winner">Personne ne règne sur la mégapole</string>
+    <string name="end_seed">Graine de partie : %1$s</string>
+    <string name="end_rank">%1$d  %2$s</string>
+    <string name="end_rank_out">–  %1$s</string>
+    <string name="end_player_you">%1$s (vous)</string>
+    <string name="end_stats">★ %1$d  ♥ %2$d  ⚡ %3$d</string>
+    <string name="end_stats_out">★ %1$d  ♥ %2$d  ⚡ %3$d  · éliminé</string>
+    <string name="action_home">Accueil</string>
+    <string name="action_replay">Rejouer</string>
+
+    <!-- Pause -->
+    <string name="pause_title">PARTIE EN PAUSE</string>
+    <string name="pause_hint">Les bots attendent. Chaque action est sauvegardée automatiquement.</string>
+    <string name="pause_resume">Reprendre la partie</string>
+    <string name="pause_save_quit">Sauvegarder et quitter</string>
+    <string name="pause_home">Retour à l’accueil</string>
+
+    <!-- Réglages -->
+    <string name="settings_title">RÉGLAGES</string>
+    <string name="settings_fast_bots">Bots rapides</string>
+    <string name="settings_fast_bots_hint">Raccourcit la pause entre les actions des bots.</string>
+    <string name="settings_countdown">Compte à rebours Fuir ou Rester</string>
+    <string name="settings_countdown_hint">%1$d s pour décider ; sans réponse, vous restez dans la Tour. Ignoré quand TalkBack est actif.</string>
+    <string name="settings_music">Musique</string>
+    <string name="settings_music_hint">Boucle synthwave pendant que l\'application est ouverte.</string>
+    <string name="settings_sfx">Effets sonores</string>
+    <string name="settings_sfx_hint">Dés lancés, dégâts et achats.</string>
+
+    <!-- Règles (§7) -->
+    <string name="rules_title">RÈGLES</string>
+    <string name="rules_tab_goal">But</string>
+    <string name="rules_tab_flow">Déroulement</string>
+    <string name="rules_tab_dice">Dés</string>
+    <string name="rules_tab_tower">Tour centrale</string>
+    <string name="rules_tab_malice">Surcharge</string>
+    <string name="rules_tab_shop">Marché noir</string>
+    <string-array name="rules_goal">
+        <item>Gagnez en finissant un tour avec 20 ★, ou en restant le dernier Kaiju en vie.</item>
+        <item>Il faut être vivant à la fin du tour pour gagner avec 20 ★.</item>
+        <item>Si tous les Kaiju sont éliminés en même temps, personne ne gagne.</item>
+        <item>Chaque Kaiju commence avec 10 ♥, 0 ★ et 0 Surcharge.</item>
+        <item>À 0 ♥, un Kaiju est éliminé : ses cartes POUVOIR, ses tuiles et ses Cellules sont défaussées, et il libère la Tour s\'il l\'occupait.</item>
+    </string-array>
+    <string-array name="rules_flow">
+        <item>1. Lancer : 6 dés, 3 lancers au maximum, le premier est automatique. Gardez les dés voulus, reprenez-en si besoin, arrêtez quand vous voulez.</item>
+        <item>2. Résoudre : seuls comptent les dés du dernier lancer, dans l\'ordre de votre choix.</item>
+        <item>3. Entrer : si la Tour centrale est libre, vous devez y entrer.</item>
+        <item>4. Acheter : dépensez vos Cellules au Marché noir.</item>
+        <item>5. Finir : les effets de fin de tour s\'appliquent, puis la victoire est testée.</item>
+    </string-array>
+    <string-array name="rules_dice">
+        <item>1, 2, 3 : un triple de n rapporte n ★, et chaque dé de plus du même chiffre rapporte 1 ★.</item>
+        <item>⚡ : 1 Cellule par dé, conservée jusqu\'à dépense.</item>
+        <item>♥ : 1 ♥ par dé hors de la Tour, sans dépasser 10 ♥. Dans la Tour, ces dés ne soignent pas.</item>
+        <item>🐾 hors de la Tour : 1 dégât par griffe au seul occupant. Les Kaiju hors de la Tour ne se blessent jamais entre eux.</item>
+        <item>🐾 dans la Tour : 1 dégât par griffe à tous les autres Kaiju.</item>
+    </string-array>
+    <string-array name="rules_tower">
+        <item>Si la Tour est libre, le joueur actif doit y entrer et gagne 1 ★. Elle est vide au début : les griffes du premier joueur ne touchent personne.</item>
+        <item>Commencer son tour dans la Tour rapporte 2 ★.</item>
+        <item>Dans la Tour, les ♥ des dés ne soignent pas : seules les cartes et les tuiles le peuvent.</item>
+        <item>Blessé par les griffes d\'un autre Kaiju, l\'occupant choisit de fuir ou de rester. Les ♥ sont perdus dans les deux cas.</item>
+        <item>On ne quitte la Tour qu\'en fuyant ainsi : une perte de ♥ due à une carte ne permet pas de fuir.</item>
+    </string-array>
+    <string-array name="rules_malice">
+        <item>Un triple de 1 rapporte 2 points de Surcharge, un triple de 2 en rapporte 1. Les 3 n\'en rapportent pas.</item>
+        <item>En atteignant ou dépassant les paliers 3, 6 et 10, choisissez une tuile de ce palier parmi celles encore disponibles.</item>
+        <item>Un Kaiju détient au plus une tuile par palier.</item>
+        <item>La jauge ne recule jamais : repasser un palier déjà franchi ne donne rien.</item>
+    </string-array>
+    <string-array name="rules_shop">
+        <item>Achetez une ou plusieurs des 3 cartes visibles en payant leur prix en Cellules.</item>
+        <item>Une carte achetée est remplacée aussitôt et la nouvelle est disponible dans le même tour.</item>
+        <item>Pour 2 Cellules, défaussez les 3 cartes visibles et révélez-en 3 nouvelles.</item>
+        <item>Une carte POUVOIR reste devant vous jusqu\'à la fin de la partie. Une carte ACTION s\'applique immédiatement, puis est défaussée.</item>
+    </string-array>
+</resources>

@@ -3,8 +3,10 @@ package com.neonkaiju.kot.feature.game
 import com.neonkaiju.kot.content.CatalogLoader
 import com.neonkaiju.kot.engine.GameEngine
 import com.neonkaiju.kot.model.DieFace
+import com.neonkaiju.kot.model.MarketReceipt
 import com.neonkaiju.kot.model.MonsterId
 import com.neonkaiju.kot.model.PendingFleeDecision
+import com.neonkaiju.kot.model.ResolutionGains
 import com.neonkaiju.kot.model.TurnPhase
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
@@ -71,9 +73,7 @@ class GameUiMapperTest {
             pendingFlee = PendingFleeDecision(attackerId = attacker.id, occupantId = human.id, damageTaken = 2),
         )
 
-        val flee = humanInTokyo.toFleeUi()!!
-        assertTrue(flee.fleeConsequence.startsWith("${attacker.monster.displayName} prend la Tour"))
-        assertTrue(flee.stayConsequence.startsWith("+2 ★ au début de votre prochain tour si vous survivez"))
+        assertEquals(attacker.monster.displayName, humanInTokyo.toFleeUi()!!.attackerName)
 
         val botInTokyo = game.copy(
             phase = TurnPhase.DECISION_FUITE,
@@ -136,7 +136,7 @@ class GameUiMapperTest {
         val rolling = game.toGameUiState(false)
         assertTrue(rolling.isRolling)
         assertFalse(rolling.isBuyPhase)
-        assertEquals("Lancer les dés", rolling.phaseLabel)
+        assertEquals(PhaseUi.ROLL, rolling.phase)
         assertEquals(GameEngine.MALICE_TIERS, rolling.maliceTiers)
 
         val buying = game.copy(phase = TurnPhase.ACHETER).toGameUiState(false)
@@ -144,7 +144,7 @@ class GameUiMapperTest {
         assertFalse(buying.isRolling)
 
         val choosing = game.copy(pendingMaliceLevels = listOf(3)).toGameUiState(false)
-        assertEquals("Choisir un pouvoir de Surcharge", choosing.phaseLabel)
+        assertEquals(PhaseUi.CHOOSE_POWER, choosing.phase)
         assertEquals(GameEngine.MALICE_TIERS, choosing.malicePick?.tiers)
     }
 
@@ -175,30 +175,30 @@ class GameUiMapperTest {
     }
 
     @Test
-    fun `player and shop card labels say in words what the symbols show`() {
-        val ui = game.copy(tokyoOccupantId = game.players[1].id).toGameUiState(false)
-
-        val label = ui.opponents.first { it.id == game.players[1].id }.accessibilityLabel
-        assertEquals("${game.players[1].monster.displayName}, 10 points de vie, 0 étoile, 0 Cellule, Surcharge 0, dans la Tour", label)
-
-        val card = game.copy(phase = TurnPhase.ACHETER).toShopUiState().cards.first()
-        assertTrue(card.accessibilityLabel.startsWith("${card.name}, "))
-        assertTrue(card.accessibilityLabel.contains("prix ${card.cost}"))
-    }
-
-    @Test
-    fun `die label says the face and the lock in words`() {
-        assertEquals("Dé 2 : griffe, verrouillé", DieUi(1, DieFace.CLAW, isKept = true, canToggle = true).accessibilityLabel)
-        assertEquals("Dé 1 : chiffre 3, libre", DieUi(0, DieFace.THREE, isKept = false, canToggle = false).accessibilityLabel)
-    }
-
-    @Test
     fun `player state gives the number of cards held`() {
         val card = catalog.cards.first()
         val ui = game.copy(players = game.players.map { if (it.isBot) it else it.copy(cards = listOf(card)) }).toGameUiState(false)
 
         assertEquals(1, ui.me.cardCount)
         assertEquals(0, ui.opponents.first().cardCount)
+    }
+
+    @Test
+    fun `bot overlay recalls the gains only when the bot moves on to buying`() {
+        val gains = ResolutionGains(vp = 2, energy = 1)
+        val state = game.copy(activePlayerIndex = 1, lastResolutionGains = mapOf(game.players[1].id to gains))
+
+        assertNull(state.toGameUiState(false).botTurn?.result)
+        assertEquals(gains, state.copy(phase = TurnPhase.ACHETER).toGameUiState(false).botTurn?.result)
+    }
+
+    @Test
+    fun `shop keeps the last receipt as values`() {
+        val human = game.players.first { !it.isBot }
+        val receipt = MarketReceipt("Bombe", energyBefore = 8, paid = 3, energyAfter = 6, effectEnergyChange = 1)
+        val shop = game.copy(phase = TurnPhase.ACHETER, lastMarketReceipts = mapOf(human.id to receipt)).toShopUiState()
+
+        assertEquals(ReceiptUi("Bombe", energyBefore = 8, paid = 3, effectChange = 1, energyAfter = 6), shop.lastReceipt)
     }
 
     @Test
