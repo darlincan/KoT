@@ -1,6 +1,7 @@
 package com.neonkaiju.kot.feature.game
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
@@ -22,7 +23,7 @@ private fun SymbolResolutionType.label(): String = stringResource(
     }
 )
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun DiceTurnControls(state: GameUiState, onEvent: (UiEvent) -> Unit, onTooltip: (String?) -> Unit) {
     var choosingOrder by remember { mutableStateOf(false) }
@@ -33,11 +34,14 @@ fun DiceTurnControls(state: GameUiState, onEvent: (UiEvent) -> Unit, onTooltip: 
             else frenchPlural(R.plurals.rolls_left, state.rollsLeft, state.rollsLeft)
         Text(stringResource(R.string.roll_counter, state.rollsMade, state.maxRolls, remaining), color = NeonPalette.NeonCyan, fontSize = 12.sp, lineHeight = 14.sp)
         Text(stringResource(if (state.rollsMade == 1) R.string.dice_hint_first else R.string.dice_hint), color = NeonPalette.TextPrimary, fontSize = 11.sp, lineHeight = 13.sp)
+        // Un dé non modifiable l'est pour la même raison que « Relancer » (bot qui joue, lancers terminés).
+        val dieBlocked = state.reroll.blockedReason?.label() ?: BlockedReason.ROLLING_OVER.label()
+        val orderBlocked = stringResource(R.string.order_blocked)
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             state.dice.chunked(3).forEach { row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     row.forEach { die ->
-                        NeonDieView(die, Modifier.weight(1f)) {
+                        NeonDieView(die, Modifier.weight(1f), disabledReason = dieBlocked, onDisabledLongPress = { onTooltip(it) }) {
                             onEvent(UiEvent.DispatchGameAction(GameAction.ToggleKeep(die.id)))
                         }
                     }
@@ -47,10 +51,15 @@ fun DiceTurnControls(state: GameUiState, onEvent: (UiEvent) -> Unit, onTooltip: 
         Text(
             stringResource(R.string.order_line, state.resolutionOrder.map { it.label() }.joinToString(separator)),
             color = NeonPalette.NeonCyan, fontSize = 10.sp, lineHeight = 12.sp,
-            modifier = Modifier.heightIn(min = 48.dp).clickable(enabled = state.canChangeOrder) {
-                order = emptyList()
-                choosingOrder = true
-            }
+            modifier = Modifier.heightIn(min = 48.dp).combinedClickable(
+                onClick = {
+                    if (state.canChangeOrder) {
+                        order = emptyList()
+                        choosingOrder = true
+                    }
+                },
+                onLongClick = { if (!state.canChangeOrder) onTooltip(orderBlocked) },
+            )
         )
         if (state.isRolling) {
             NeonButton(stringResource(R.string.action_reroll), enabled = state.reroll.enabled, accentColor = NeonPalette.NeonCyan,
